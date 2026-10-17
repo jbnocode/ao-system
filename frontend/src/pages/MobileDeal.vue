@@ -505,6 +505,24 @@ const tabs = computed(() => {
       iconLeft: FileTextIcon,
       condition: () => canViewQuotations.value,
     },
+    {
+      name: 'Quotes',
+      value: 'quotes',
+      label: __('Quotes'),
+      iconLeft: FileTextIcon,
+    },
+    {
+      name: 'Applications',
+      value: 'applications',
+      label: __('Applications'),
+      iconLeft: NoteIcon,
+    },
+    {
+      name: 'Policies',
+      value: 'policies',
+      label: __('Policies'),
+      iconLeft: TaskIcon,
+    },
   ]
   return tabOptions.filter((tab) => (tab.condition ? tab.condition() : true))
 })

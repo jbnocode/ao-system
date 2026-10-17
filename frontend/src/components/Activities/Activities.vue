@@ -10,7 +10,8 @@
     :modalRef="modalRef"
   />
   <FadedScrollableDiv class="flex flex-col h-full overflow-y-auto">
-    <QuotationsList v-if="title == 'Quotations'" :deal="docname" />
+    <InsuranceRecords v-if="['Quotes', 'Applications', 'Policies'].includes(title)" :key="title" :deal="docname" :kind="title" />
+    <QuotationsList v-else-if="title == 'Quotations'" :deal="docname" />
     <div
       v-else-if="all_activities?.loading"
       class="flex flex-1 flex-col items-center justify-center gap-3 text-2xl-medium text-ink-gray-4"
@@ -515,6 +516,7 @@ import { useNoteView } from '@/composables/noteView'
 import TaskArea from '@/components/Activities/TaskArea.vue'
 import AttachmentArea from '@/components/Activities/AttachmentArea.vue'
 import QuotationsList from '@/components/Activities/QuotationsList.vue'
+import InsuranceRecords from '@/components/Activities/InsuranceRecords.vue'
 import DataFields from '@/components/Activities/DataFields.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import ActivityIcon from '@/components/Icons/ActivityIcon.vue'

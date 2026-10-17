@@ -37,6 +37,11 @@ const routes = [
     component: () => import('@/pages/Dashboard.vue'),
   },
   {
+    path: '/automations',
+    name: 'Automations',
+    component: () => import('@/pages/Automations.vue'),
+  },
+  {
     alias: '/leads',
     path: '/leads/view/:viewType?',
     name: 'Leads',
