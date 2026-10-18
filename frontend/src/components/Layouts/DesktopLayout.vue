@@ -1,9 +1,13 @@
 <template>
-  <div class="flex h-screen w-screen">
+  <div class="flex h-screen w-screen overflow-hidden">
     <AppSidebar />
-    <div class="flex-1 flex flex-col h-full overflow-auto bg-surface-base">
+    <div
+      class="flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-surface-base"
+    >
       <AppHeader />
-      <slot />
+      <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto">
+        <slot />
+      </div>
     </div>
     <GlobalModals />
   </div>

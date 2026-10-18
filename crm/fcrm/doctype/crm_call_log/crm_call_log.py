@@ -19,6 +19,8 @@ class CRMCallLog(Document):
 		from frappe.core.doctype.dynamic_link.dynamic_link import DynamicLink
 		from frappe.types import DF
 
+		ai_summary: DF.LongText | None
+		ai_transcript: DF.LongText | None
 		caller: DF.Link | None
 		duration: DF.Duration | None
 		end_time: DF.Datetime | None
@@ -42,7 +44,7 @@ class CRMCallLog(Document):
 			"Queued",
 			"Canceled",
 		]
-		telephony_medium: DF.Literal["", "Manual", "Twilio", "Exotel"]
+		telephony_medium: DF.Literal["", "Manual", "Twilio", "Exotel", "Vapi"]
 		to: DF.Data
 		type: DF.Literal["Incoming", "Outgoing"]
 	# end: auto-generated types
@@ -52,6 +54,32 @@ class CRMCallLog(Document):
 			self.id = generate_hash(length=12)
 		if not self.telephony_medium:
 			self.telephony_medium = "Manual"
+
+
+def get_permission_query_conditions(user=None):
+	"""Agents see only their own logs; managers see the team."""
+	if not user:
+		user = frappe.session.user
+	if user == "Administrator":
+		return ""
+	roles = frappe.get_roles(user)
+	if "System Manager" in roles or "Sales Manager" in roles:
+		return ""
+	user_esc = frappe.db.escape(user)
+	return f"(`tabCRM Call Log`.`caller` = {user_esc} OR `tabCRM Call Log`.`receiver` = {user_esc} OR `tabCRM Call Log`.`owner` = {user_esc})"
+
+
+def has_permission(doc, ptype, user=None):
+	if not user:
+		user = frappe.session.user
+	if user == "Administrator":
+		return True
+	roles = frappe.get_roles(user)
+	if "System Manager" in roles or "Sales Manager" in roles:
+		return True
+	if ptype == "create" or not getattr(doc, "name", None):
+		return True
+	return user in {doc.get("caller"), doc.get("receiver"), doc.get("owner")}
 
 	@staticmethod
 	def default_list_data():
@@ -341,3 +369,45 @@ def create_lead_from_call_log(call_log: str | dict, lead_details: str | dict | N
 	call_doc.save()
 
 	return lead.name
+
+
+@frappe.whitelist()
+def save_transcript(name: str, transcript: str, summary: str | None = None):
+	"""Save a call transcript (manual paste or AI) onto CRM Call Log + linked note."""
+	if not name:
+		frappe.throw(_("Call log is required"), frappe.ValidationError)
+
+	transcript = (transcript or "").strip()
+	if not transcript:
+		frappe.throw(_("Transcript is required"), frappe.ValidationError)
+
+	call_log = frappe.get_doc("CRM Call Log", name)
+	if not call_log.has_permission("write"):
+		frappe.throw(_("You are not permitted to update this call log."), frappe.PermissionError)
+
+	call_log.ai_transcript = transcript
+	if summary is not None:
+		call_log.ai_summary = (summary or "").strip()
+
+	try:
+		from crm.vapi.api import _upsert_ai_call_note
+
+		note = _upsert_ai_call_note(
+			call_log,
+			call_log.ai_summary or "",
+			call_log.ai_transcript,
+		)
+		if note:
+			call_log.note = note.name
+			call_log.link_with_reference_doc("FCRM Note", note.name)
+	except Exception:
+		frappe.log_error(title=_("Call transcript note writeback failed"))
+
+	call_log.save()
+	frappe.db.commit()
+	return {
+		"name": call_log.name,
+		"note": call_log.note,
+		"ai_transcript": call_log.ai_transcript,
+		"ai_summary": call_log.ai_summary,
+	}

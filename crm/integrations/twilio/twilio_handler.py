@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import frappe
 from frappe import _
 from frappe.utils.password import get_decrypted_password
@@ -7,6 +9,14 @@ from twilio.rest import Client as TwilioClient
 from twilio.twiml.voice_response import Dial, VoiceResponse
 
 from .utils import get_public_url, merge_dicts
+
+
+def _capability_enabled(capabilities, key: str) -> bool:
+	if not capabilities:
+		return False
+	if isinstance(capabilities, dict):
+		return bool(capabilities.get(key))
+	return bool(getattr(capabilities, key, False))
 
 
 class Twilio:
@@ -32,9 +42,109 @@ class Twilio:
 		return Twilio(settings=settings)
 
 	def get_phone_numbers(self):
-		"""Get account's twilio phone numbers."""
-		numbers = self.twilio_client.incoming_phone_numbers.list()
-		return [n.phone_number for n in numbers]
+		"""Get account's twilio phone numbers (E.164 strings)."""
+		return [n["phone_number"] for n in self.list_incoming_phone_numbers()]
+
+	def list_incoming_phone_numbers(self):
+		"""List owned Twilio numbers with metadata."""
+		numbers = self.twilio_client.incoming_phone_numbers.list(limit=200)
+		return [
+			{
+				"sid": n.sid,
+				"phone_number": n.phone_number,
+				"friendly_name": n.friendly_name or n.phone_number,
+				"capabilities": {
+					"voice": _capability_enabled(n.capabilities, "voice"),
+					"sms": _capability_enabled(n.capabilities, "sms"),
+				},
+			}
+			for n in numbers
+		]
+
+	def search_available_numbers(self, country_code: str = "US", area_code: str | None = None, limit: int = 20):
+		"""Search Twilio inventory for local numbers available to buy."""
+		country_code = (country_code or "US").upper().strip()
+		limit = min(max(int(limit or 20), 1), 50)
+		params = {"limit": limit, "voice_enabled": True}
+		if area_code:
+			params["area_code"] = str(area_code).strip()
+
+		try:
+			available = self.twilio_client.available_phone_numbers(country_code).local.list(**params)
+		except Exception as exc:
+			frappe.throw(_("Could not search Twilio numbers: {0}").format(str(exc)))
+
+		return [
+			{
+				"phone_number": n.phone_number,
+				"friendly_name": n.friendly_name or n.phone_number,
+				"locality": getattr(n, "locality", None) or "",
+				"region": getattr(n, "region", None) or "",
+				"iso_country": getattr(n, "iso_country", None) or country_code,
+				"capabilities": {
+					"voice": _capability_enabled(n.capabilities, "voice"),
+					"sms": _capability_enabled(n.capabilities, "sms"),
+				},
+			}
+			for n in available
+		]
+
+	def get_incoming_voice_url(self):
+		return get_public_url("/api/method/crm.integrations.twilio.api.twilio_incoming_call_handler")
+
+	def get_incoming_sms_url(self):
+		return get_public_url("/api/method/crm.integrations.twilio.api.twilio_incoming_sms_handler")
+
+	def get_incoming_sms_status_url(self):
+		return get_public_url("/api/method/crm.integrations.twilio.api.twilio_sms_status_handler")
+
+	def purchase_phone_number(self, phone_number: str, friendly_name: str | None = None):
+		"""Buy a number and point inbound voice + SMS at CRM webhooks / TwiML app."""
+		phone_number = (phone_number or "").strip()
+		if not phone_number:
+			frappe.throw(_("Phone number is required"))
+
+		# Inbound voice must hit twilio_incoming_call_handler — do not set
+		# voice_application_sid here (that app URL is for Client SDK outbound).
+		create_kwargs = {
+			"phone_number": phone_number,
+			"voice_method": "POST",
+			"voice_url": self.get_incoming_voice_url(),
+			"sms_method": "POST",
+			"sms_url": self.get_incoming_sms_url(),
+		}
+		if friendly_name:
+			create_kwargs["friendly_name"] = friendly_name
+
+		try:
+			number = self.twilio_client.incoming_phone_numbers.create(**create_kwargs)
+		except Exception as exc:
+			frappe.throw(_("Could not purchase Twilio number: {0}").format(str(exc)))
+
+		return {
+			"sid": number.sid,
+			"phone_number": number.phone_number,
+			"friendly_name": number.friendly_name or number.phone_number,
+		}
+
+	def configure_sms_webhooks(self, phone_number_sid: str | None = None):
+		"""Point SMS webhooks at CRM for one number (or all owned numbers)."""
+		sms_url = self.get_incoming_sms_url()
+		updated = []
+		numbers = (
+			[self.twilio_client.incoming_phone_numbers(phone_number_sid).fetch()]
+			if phone_number_sid
+			else self.twilio_client.incoming_phone_numbers.list(limit=200)
+		)
+		for number in numbers:
+			try:
+				number.update(sms_method="POST", sms_url=sms_url)
+				updated.append(number.phone_number)
+			except Exception:
+				frappe.log_error(
+					title=_("Failed to set SMS webhook for {0}").format(number.phone_number)
+				)
+		return updated
 
 	def generate_voice_access_token(self, identity: str, ttl=60 * 60):
 		"""Generates a token required to make voice calls from the browser."""

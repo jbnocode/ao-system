@@ -1,0 +1,106 @@
+{
+ "actions": [],
+ "creation": "2026-10-18 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "enabled",
+  "section_keys",
+  "private_api_key",
+  "column_break_pub",
+  "public_key",
+  "section_defaults",
+  "default_voice_id",
+  "column_break_dash",
+  "dashboard_url",
+  "section_webhook",
+  "webhook_secret"
+ ],
+ "fields": [
+  {
+   "default": "0",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "fieldname": "section_keys",
+   "fieldtype": "Section Break",
+   "label": "API Keys"
+  },
+  {
+   "description": "Private key for server-side Vapi API calls. Never expose to the browser.",
+   "fieldname": "private_api_key",
+   "fieldtype": "Password",
+   "label": "Private API Key"
+  },
+  {
+   "fieldname": "column_break_pub",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Public key for the in-app test widget only.",
+   "fieldname": "public_key",
+   "fieldtype": "Data",
+   "label": "Public Key"
+  },
+  {
+   "fieldname": "section_defaults",
+   "fieldtype": "Section Break",
+   "label": "Defaults"
+  },
+  {
+   "default": "warm",
+   "fieldname": "default_voice_id",
+   "fieldtype": "Select",
+   "label": "Default Voice",
+   "options": "warm\nenergetic\nsteady"
+  },
+  {
+   "fieldname": "column_break_dash",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "https://dashboard.vapi.ai",
+   "description": "Escape hatch for System Managers",
+   "fieldname": "dashboard_url",
+   "fieldtype": "Data",
+   "label": "Vapi Dashboard URL"
+  },
+  {
+   "fieldname": "section_webhook",
+   "fieldtype": "Section Break",
+   "label": "Webhooks"
+  },
+  {
+   "description": "Optional shared secret. If set, send Authorization: Bearer <secret> from Vapi (Custom Credential).",
+   "fieldname": "webhook_secret",
+   "fieldtype": "Password",
+   "label": "Webhook Secret"
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-18 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "FCRM",
+ "name": "CRM Vapi Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

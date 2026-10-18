@@ -1,0 +1,106 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-10-17 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "user",
+  "context_type",
+  "credits_spent",
+  "status",
+  "column_break_tokens",
+  "tokens_in",
+  "tokens_out",
+  "section_message",
+  "message_preview"
+ ],
+ "fields": [
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "User",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fieldname": "context_type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Context Type"
+  },
+  {
+   "default": "0",
+   "fieldname": "credits_spent",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Credits Spent",
+   "non_negative": 1
+  },
+  {
+   "default": "Success",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Success\nFailed\nDemo"
+  },
+  {
+   "fieldname": "column_break_tokens",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "tokens_in",
+   "fieldtype": "Int",
+   "label": "Tokens In",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "tokens_out",
+   "fieldtype": "Int",
+   "label": "Tokens Out",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "section_message",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "message_preview",
+   "fieldtype": "Small Text",
+   "label": "Message Preview"
+  }
+ ],
+ "links": [],
+ "modified": "2026-10-17 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "FCRM",
+ "name": "CRM AI Usage Log",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
+  },
+  {
+   "read": 1,
+   "role": "Sales User"
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -32,8 +32,10 @@ class TestDemoData(FrappeTestCase):
 		DEMO_NOTES_KEY = "crm_demo_notes"
 		DEMO_TASKS_KEY = "crm_demo_tasks"
 		DEMO_CALL_LOGS_KEY = "crm_demo_call_logs"
+		DEMO_SMS_KEY = "crm_demo_sms_messages"
 		DEMO_ACTIVITIES_KEY = "crm_demo_activities"
 		DEMO_DEALS_KEY = "crm_demo_deals"
+		DEMO_INSURANCE_KEY = "crm_demo_insurance"
 
 		# 1. Before creation: nothing should exist
 		for user in DEMO_USERS:
@@ -44,6 +46,7 @@ class TestDemoData(FrappeTestCase):
 		self.assertIsNone(frappe.db.get_default(DEMO_NOTES_KEY))
 		self.assertIsNone(frappe.db.get_default(DEMO_TASKS_KEY))
 		self.assertIsNone(frappe.db.get_default(DEMO_CALL_LOGS_KEY))
+		self.assertIsNone(frappe.db.get_default(DEMO_SMS_KEY))
 		self.assertIsNone(frappe.db.get_default(DEMO_DEALS_KEY))
 
 		# 2. Create demo data
@@ -70,11 +73,18 @@ class TestDemoData(FrappeTestCase):
 		demo_note_names = json.loads(frappe.db.get_default(DEMO_NOTES_KEY) or "[]")
 		demo_task_names = json.loads(frappe.db.get_default(DEMO_TASKS_KEY) or "[]")
 		demo_call_log_names = json.loads(frappe.db.get_default(DEMO_CALL_LOGS_KEY) or "[]")
+		demo_sms_payload = json.loads(frappe.db.get_default(DEMO_SMS_KEY) or "{}")
+		demo_sms_names = (
+			demo_sms_payload.get("messages", [])
+			if isinstance(demo_sms_payload, dict)
+			else demo_sms_payload
+		)
 		demo_deal_data = json.loads(frappe.db.get_default(DEMO_DEALS_KEY) or "{}")
 
 		self.assertGreater(len(demo_note_names), 0)
 		self.assertGreater(len(demo_task_names), 0)
 		self.assertGreater(len(demo_call_log_names), 0)
+		self.assertGreater(len(demo_sms_names), 0)
 		if isinstance(demo_deal_data, dict):
 			self.assertGreater(len(demo_deal_data.get("deals", [])), 0)
 
@@ -93,15 +103,36 @@ class TestDemoData(FrappeTestCase):
 		self.assertTrue(frappe.db.get_default(DEMO_NOTES_KEY))
 		self.assertTrue(frappe.db.get_default(DEMO_TASKS_KEY))
 		self.assertTrue(frappe.db.get_default(DEMO_CALL_LOGS_KEY))
+		self.assertTrue(frappe.db.get_default(DEMO_SMS_KEY))
 		self.assertTrue(frappe.db.get_default(DEMO_ACTIVITIES_KEY))
 		self.assertTrue(frappe.db.get_default(DEMO_DEALS_KEY))
+
+		# Insurance quotes / policies (when doctypes are installed)
+		insurance_data = json.loads(frappe.db.get_default(DEMO_INSURANCE_KEY) or "{}")
+		if frappe.db.exists("DocType", "Insurance Quote"):
+			self.assertGreater(len(insurance_data.get("quotes") or []), 0)
+			self.assertGreater(len(insurance_data.get("policies") or []), 0)
+			for quote_name in insurance_data.get("quotes") or []:
+				self.assertTrue(frappe.db.exists("Insurance Quote", quote_name))
+			for policy_name in insurance_data.get("policies") or []:
+				self.assertTrue(frappe.db.exists("Insurance Policy", policy_name))
 
 		# 3. Capture demo record names before clearing
 		lead_names = json.loads(frappe.db.get_default(DEMO_LEADS_KEY) or "[]")
 		note_names = json.loads(frappe.db.get_default(DEMO_NOTES_KEY) or "[]")
 		task_names = json.loads(frappe.db.get_default(DEMO_TASKS_KEY) or "[]")
 		call_log_names = json.loads(frappe.db.get_default(DEMO_CALL_LOGS_KEY) or "[]")
+		sms_payload = json.loads(frappe.db.get_default(DEMO_SMS_KEY) or "{}")
+		sms_names = (
+			sms_payload.get("messages", [])
+			if isinstance(sms_payload, dict)
+			else sms_payload
+		)
+		sms_contacts = (
+			sms_payload.get("contacts", []) if isinstance(sms_payload, dict) else []
+		)
 		deal_data = json.loads(frappe.db.get_default(DEMO_DEALS_KEY) or "{}")
+		insurance_data = json.loads(frappe.db.get_default(DEMO_INSURANCE_KEY) or "{}")
 
 		# Clear demo data
 		clear_demo_data()
@@ -117,8 +148,20 @@ class TestDemoData(FrappeTestCase):
 		self.assertFalse(self._check_demo_records_exist("FCRM Note", note_names))
 		self.assertFalse(self._check_demo_records_exist("CRM Task", task_names))
 		self.assertFalse(self._check_demo_records_exist("CRM Call Log", call_log_names))
+		self.assertFalse(self._check_demo_records_exist("CRM SMS Message", sms_names))
+		self.assertFalse(self._check_demo_records_exist("Contact", sms_contacts))
 		if isinstance(deal_data, dict) and deal_data.get("deals"):
 			self.assertFalse(self._check_demo_records_exist("CRM Deal", deal_data.get("deals", [])))
+		if insurance_data.get("quotes"):
+			self.assertFalse(
+				self._check_demo_records_exist("Insurance Quote", insurance_data.get("quotes", []))
+			)
+		if insurance_data.get("policies"):
+			self.assertFalse(
+				self._check_demo_records_exist(
+					"Insurance Policy", insurance_data.get("policies", [])
+				)
+			)
 
 		# Site defaults cleared
 		self.assertIsNone(frappe.db.get_default(DEMO_STATE_KEY))
@@ -126,5 +169,7 @@ class TestDemoData(FrappeTestCase):
 		self.assertIsNone(frappe.db.get_default(DEMO_NOTES_KEY))
 		self.assertIsNone(frappe.db.get_default(DEMO_TASKS_KEY))
 		self.assertIsNone(frappe.db.get_default(DEMO_CALL_LOGS_KEY))
+		self.assertIsNone(frappe.db.get_default(DEMO_SMS_KEY))
 		self.assertIsNone(frappe.db.get_default(DEMO_ACTIVITIES_KEY))
 		self.assertIsNone(frappe.db.get_default(DEMO_DEALS_KEY))
+		self.assertIsNone(frappe.db.get_default(DEMO_INSURANCE_KEY))

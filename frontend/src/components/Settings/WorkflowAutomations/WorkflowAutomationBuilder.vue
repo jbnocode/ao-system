@@ -1,26 +1,20 @@
 <template>
-  <div class="flex h-full min-h-0 bg-surface-base p-2">
-    <div
-      class="automation-card flex min-w-0 flex-1 flex-col overflow-hidden rounded-6 bg-surface-gray-1 shadow-sm ring-1 ring-outline-gray-1"
-    >
+  <div class="flex h-full min-h-0 bg-surface-white">
+    <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <!-- Single top bar -->
       <div
-        class="flex h-14 shrink-0 items-center justify-between border-b border-outline-gray-2 px-4"
+        class="flex h-14 shrink-0 items-center gap-3 border-b border-outline-gray-2 px-3"
       >
-        <div class="flex min-w-0 items-center gap-2">
-          <Breadcrumbs class="automation-breadcrumbs" :items="breadcrumbs">
-            <template #prefix>
-              <WorkflowIcon class="mr-1.5 size-4 text-ink-gray-5" />
-            </template>
-          </Breadcrumbs>
-          <span class="text-ink-gray-5 text-sm-semibold" aria-hidden="true"
-            >/</span
-          >
-          <div
-            class="flex min-w-0 cursor-text items-center gap-1 rounded-4 pr-1.5 transition-colors hover:bg-surface-gray-2"
-            @focus="selectTitle"
-          >
+        <div class="flex min-w-0 flex-1 items-center gap-2">
+          <Button
+            variant="ghost"
+            icon="lucide-arrow-left"
+            :aria-label="__('Back')"
+            @click="$emit('close')"
+          />
+          <div class="min-w-0 shrink" @focus="selectTitle">
             <div
-              class="title-sizer font-semibold text-ink-gray-7 -mr-2.5"
+              class="title-sizer font-semibold text-ink-gray-8"
               :data-value="doc.title || __('Untitled automation')"
             >
               <TextInput
@@ -32,24 +26,17 @@
               />
             </div>
           </div>
-          <span class="-ml-1.5 select-none text-ink-red-5" aria-hidden="true"
-            >*</span
+          <span
+            v-if="dirty || !automationName"
+            class="shrink-0 text-p-sm text-ink-gray-5"
           >
-          <span class="sr-only">{{ __('(required)') }}</span>
+            {{ __('Not saved yet') }}
+          </span>
         </div>
-        <div class="flex items-center gap-2">
-          <Badge
-            v-if="dirty"
-            size="md"
-            :label="__('Unsaved')"
-            theme="amber"
-            variant="subtle"
-          >
-            <template #prefix>
-              <IndicatorIcon class="text-amber-500" />
-            </template>
-          </Badge>
 
+        <TabButtons v-model="tab" :options="tabOptions" />
+
+        <div class="flex flex-1 items-center justify-end gap-2">
           <Button
             :label="__('Save')"
             variant="solid"
@@ -57,41 +44,36 @@
             :disabled="!dirty"
             @click="saveAutomation"
           />
-          <Button
-            icon="lucide-x"
-            variant="ghost"
-            :aria-label="__('Close')"
-            @click="$emit('close')"
-          />
+          <div
+            class="flex items-center gap-2 border-l border-outline-gray-2 pl-2"
+          >
+            <span class="text-p-sm text-ink-gray-6">
+              {{ doc.enabled ? __('Published') : __('Draft') }}
+            </span>
+            <Switch
+              size="sm"
+              :model-value="Boolean(doc.enabled)"
+              :disabled="!doc.trigger_type"
+              :aria-label="__('Published')"
+              @update:model-value="doc.enabled = $event ? 1 : 0"
+            />
+          </div>
         </div>
       </div>
-      <div
-        class="flex shrink-0 items-center justify-between border-b border-outline-gray-2 px-4 py-2"
-      >
-        <TabButtons v-model="tab" :options="tabOptions" />
-        <div class="flex items-center gap-2">
-          <span class="text-sm text-ink-gray-6"> {{ __('Enabled') }} </span>
-          <Switch
-            size="sm"
-            :model-value="Boolean(doc.enabled)"
-            :disabled="!doc.trigger_type"
-            @update:model-value="doc.enabled = $event ? 1 : 0"
-          />
-        </div>
-      </div>
-      <div v-if="tab === 'test'" class="min-h-0 flex-1 p-4">
+
+      <div v-if="tab === 'test'" class="min-h-0 flex-1 overflow-y-auto p-4">
         <AutomationTrialRun
           v-if="canTest"
           :automation-name="automationName"
           :doc="doc"
         />
-        <p v-else class="text-sm text-ink-gray-5">
+        <p v-else class="text-p-sm text-ink-gray-5">
           {{ __('Save the flow before testing it.') }}
         </p>
       </div>
       <div
         v-else
-        class="relative min-h-0 flex-1 outline-none"
+        class="relative min-h-0 flex-1 bg-surface-gray-1 outline-none"
         autofocus
         tabindex="0"
       >
@@ -112,34 +94,59 @@
           @undo="undo"
           @redo="redo"
         />
-        <Button
-          v-if="doc.trigger_type"
-          class="absolute right-3 top-3 z-10 shadow-sm transition-transform active:scale-95"
-          variant="subtle"
-          :aria-label="
-            inspectorOpen ? __('Close inspector') : __('Open inspector')
-          "
-          :aria-expanded="inspectorOpen"
-          @click="inspectorOpen = !inspectorOpen"
-        >
-          <template #icon>
-            <CollapseIcon
-              class="size-4 transition-transform duration-200 ease-out"
-              :class="{ 'rotate-180': inspectorOpen }"
-            />
-          </template>
-        </Button>
+        <div class="absolute right-3 top-3 z-10 flex items-center gap-2">
+          <Button
+            class="shadow-sm transition-transform active:scale-95"
+            variant="subtle"
+            :aria-label="
+              aiOpen ? __('Close AI Builder') : __('Open AI Builder')
+            "
+            :aria-pressed="aiOpen"
+            @click="aiOpen = !aiOpen"
+          >
+            <template #icon>
+              <AiBuilderIcon class="size-4" />
+            </template>
+          </Button>
+          <Button
+            v-if="doc.trigger_type"
+            class="shadow-sm transition-transform active:scale-95"
+            variant="subtle"
+            :aria-label="
+              inspectorOpen ? __('Close inspector') : __('Open inspector')
+            "
+            :aria-expanded="inspectorOpen"
+            @click="inspectorOpen = !inspectorOpen"
+          >
+            <template #icon>
+              <CollapseIcon
+                class="size-4 transition-transform duration-200 ease-out"
+                :class="{ 'rotate-180': inspectorOpen }"
+              />
+            </template>
+          </Button>
+        </div>
       </div>
     </div>
+
     <div
-      class="min-h-0 shrink-0 overflow-hidden transition-[width,margin,opacity] duration-200 ease-out motion-reduce:transition-none"
-      :class="showInspector ? 'ml-2 w-[340px]' : 'ml-0 w-0 opacity-0'"
+      class="min-h-0 shrink-0 overflow-hidden border-l border-outline-gray-2 transition-[width] duration-200 ease-out motion-reduce:transition-none"
+      :class="showAi ? 'w-[320px]' : 'w-0'"
+      :aria-hidden="!showAi"
+      :inert="!showAi"
+    >
+      <div class="h-full w-[320px] overflow-hidden bg-surface-white">
+        <AutomationAiChat :snapshot="aiSnapshot" @apply="onApplyAi" />
+      </div>
+    </div>
+
+    <div
+      class="min-h-0 shrink-0 overflow-hidden border-l border-outline-gray-2 transition-[width] duration-200 ease-out motion-reduce:transition-none"
+      :class="showInspector ? 'w-[340px]' : 'w-0'"
       :aria-hidden="!showInspector"
       :inert="!showInspector"
     >
-      <div
-        class="automation-card h-full w-[340px] overflow-hidden rounded-6 bg-surface-base"
-      >
+      <div class="h-full w-[340px] overflow-hidden bg-surface-white">
         <AutomationInspector
           :doc="doc"
           :selected-step="selectedStep"
@@ -155,9 +162,11 @@
 <script setup>
 import AutomationInspector from './WorkflowAutomationInspector.vue'
 import AutomationTrialRun from './WorkflowTrialRun.vue'
+import AutomationAiChat from './AutomationAiChat.vue'
 import WorkflowFlow from './WorkflowFlow.vue'
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
 import { useUndoHistory } from '@/composables/useUndoHistory'
+import { applyAiOps } from '@/utils/applyAiOps'
 import { globalStore } from '@/stores/global'
 import { blockGroups } from './workflowBlocks'
 import { aliasTargets, loadCapabilities } from './workflowCapabilities'
@@ -175,19 +184,9 @@ import {
   toRows,
   toTree,
 } from './workflowSteps'
-import {
-  Badge,
-  Breadcrumbs,
-  Button,
-  Switch,
-  TabButtons,
-  TextInput,
-  call,
-  toast,
-} from 'frappe-ui'
-import WorkflowIcon from '~icons/lucide/workflow'
+import { Button, Switch, TabButtons, TextInput, call, toast } from 'frappe-ui'
+import AiBuilderIcon from '~icons/lucide/wand-sparkles'
 import CollapseIcon from '~icons/lucide/chevrons-left'
-import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
 import { computed, reactive, ref, watch } from 'vue'
 
 const props = defineProps({
@@ -200,22 +199,18 @@ const { $dialog } = globalStore()
 const loading = ref(false)
 const saving = ref(false)
 const tab = ref('editor')
+/** Closed until a non-trigger step is selected (or user opens it). */
 const inspectorOpen = ref(false)
+/** Closed by default; user opens via AI Builder. */
+const aiOpen = ref(false)
 const selectedId = ref('trigger')
 const errors = reactive({})
 const doc = reactive(defaultDoc())
 const savedSnapshot = ref('')
 
 const tabOptions = [
-  { label: __('Editor'), value: 'editor' },
-  { label: __('Test Run'), value: 'test' },
-]
-
-const breadcrumbs = [
-  {
-    label: __('Workflow Automation'),
-    onClick: () => emit('close'),
-  },
+  { label: __('Builder'), value: 'editor' },
+  { label: __('Test'), value: 'test' },
 ]
 
 const placed = computed(() => layoutSteps(doc.actions))
@@ -242,6 +237,7 @@ const flowTargets = computed(() =>
 const showInspector = computed(
   () => tab.value === 'editor' && inspectorOpen.value,
 )
+const showAi = computed(() => tab.value === 'editor' && aiOpen.value)
 const canDeleteSelected = computed(() =>
   selectedId.value === 'trigger'
     ? Boolean(doc.trigger_type)
@@ -402,6 +398,46 @@ function patchDoc(values) {
   Object.assign(doc, values)
 }
 
+/** Compact tree for the LLM — ids stay so ops can target steps. */
+function aiSnapshot() {
+  return {
+    title: doc.title,
+    document_type: doc.document_type,
+    enabled: doc.enabled,
+    trigger_type: doc.trigger_type,
+    trigger_field: doc.trigger_field,
+    from_value: doc.from_value,
+    to_value: doc.to_value,
+    custom_event: doc.custom_event,
+    cron_expression: doc.cron_expression,
+    date_field: doc.date_field,
+    actions: summarizeActions(doc.actions),
+  }
+}
+
+function summarizeActions(nodes) {
+  return (nodes || []).map((node) => ({
+    _id: node._id,
+    step_type: node.step_type,
+    action_type: node.action_type,
+    params: node.params,
+    children: node.children
+      ? {
+          If: summarizeActions(node.children.If),
+          Else: summarizeActions(node.children.Else),
+        }
+      : undefined,
+  }))
+}
+
+function onApplyAi(ops) {
+  const touched = applyAiOps(doc, ops)
+  if (touched.length) selectedId.value = touched[touched.length - 1]
+  else if (doc.trigger_type) selectedId.value = 'trigger'
+  inspectorOpen.value = true
+  toast.success(__('Applied to canvas'))
+}
+
 /** Restoring replaces the whole document, so the canvas rebuilds from the snapshot. */
 function applySnapshot(snapshot) {
   Object.assign(doc, snapshot)
@@ -435,13 +471,13 @@ function isKey(event, key) {
 
 function selectNode(id) {
   selectedId.value = id
-  if (id !== 'trigger' || doc.trigger_type) inspectorOpen.value = true
+  // Open inspector for steps; trigger config stays quieter unless the user opens it.
+  if (id !== 'trigger') inspectorOpen.value = true
 }
 
 function pickTrigger(trigger) {
   applyTrigger(trigger)
   selectedId.value = 'trigger'
-  inspectorOpen.value = true
 }
 
 /** Event triggers store as a Custom Event; anything else clears the event it replaces. */
@@ -617,35 +653,12 @@ function cleanMessage(message) {
 </script>
 
 <style scoped>
-/* Both panes rise into place when the builder opens. */
-.automation-card {
-  animation: card-in 220ms ease-out both;
-}
-
-@keyframes card-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px) scale(0.995);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .automation-card {
-    animation: none;
-  }
-}
-
 /* An invisible mirror of the text sets the track width, so the field is only
    ever as wide as its content until it hits the cap and truncates. */
 .title-sizer {
   display: inline-grid;
   min-width: 0;
   max-width: min(20rem, 40vw);
-}
-
-.automation-breadcrumbs :deep(a),
-.automation-breadcrumbs :deep(button) {
-  @apply text-sm-medium;
 }
 
 .title-sizer::after,

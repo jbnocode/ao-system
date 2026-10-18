@@ -42,6 +42,37 @@ const routes = [
     component: () => import('@/pages/Automations.vue'),
   },
   {
+    path: '/campaigns',
+    name: 'Campaigns',
+    component: () => import('@/pages/Campaigns.vue'),
+  },
+  {
+    path: '/ai',
+    name: 'AI',
+    component: () => import('@/pages/AiChat.vue'),
+  },
+  {
+    path: '/forms',
+    name: 'Forms',
+    component: () => import('@/pages/Forms.vue'),
+  },
+  {
+    path: '/quoting',
+    name: 'Quoting',
+    component: () => import('@/pages/Quoting.vue'),
+  },
+  {
+    path: '/policies',
+    name: 'Policies',
+    component: () => import('@/pages/Policies.vue'),
+  },
+  {
+    path: '/documents',
+    name: 'Documents',
+    component: () => import('@/pages/Documents.vue'),
+  },
+
+  {
     alias: '/leads',
     path: '/leads/view/:viewType?',
     name: 'Leads',
@@ -70,6 +101,22 @@ const routes = [
     path: '/notes/view/:viewType?',
     name: 'Notes',
     component: () => import('@/pages/Notes.vue'),
+  },
+  {
+    path: '/calendar',
+    name: 'Calendar',
+    component: () => import('@/pages/Calendar.vue'),
+  },
+  {
+    path: '/booking',
+    name: 'Booking',
+    component: () => import('@/pages/Booking.vue'),
+  },
+  {
+    path: '/book/:slug',
+    name: 'Public Booking',
+    component: () => import('@/pages/PublicBooking.vue'),
+    meta: { public: true },
   },
   {
     alias: '/tasks',
@@ -102,10 +149,35 @@ const routes = [
     props: true,
   },
   {
+    path: '/call',
+    name: 'Dialer',
+    component: () => import('@/pages/Dialer.vue'),
+  },
+  {
+    path: '/phone',
+    name: 'Human Dialer',
+    component: () => import('@/pages/HumanDialer.vue'),
+  },
+  {
+    path: '/ai-caller',
+    name: 'AI Caller Usage',
+    component: () => import('@/pages/AiCallerUsage.vue'),
+    meta: { managerOnly: true },
+  },
+  {
+    path: '/text',
+    name: 'Text Inbox',
+    component: () => import('@/pages/TextInbox.vue'),
+  },
+  {
+    path: '/inbox',
+    redirect: { name: 'Text Inbox' },
+  },
+  {
     alias: '/call-logs',
     path: '/call-logs/view/:viewType?',
     name: 'Call Logs',
-    component: () => import('@/pages/CallLogs.vue'),
+    redirect: { name: 'Dialer', query: { panel: 'call-logs' } },
   },
   {
     path: '/data-import',
@@ -159,7 +231,7 @@ router.beforeEach(async (to, from, next) => {
   router.previousRoute = from
 
   const { isLoggedIn, user } = sessionStore()
-  const { users, isCrmUser, isAdmin } = usersStore()
+  const { users, isCrmUser, isAdmin, isManager } = usersStore()
 
   if (isLoggedIn && !users.fetched) {
     try {
@@ -172,7 +244,17 @@ router.beforeEach(async (to, from, next) => {
     }
   }
 
+  if (isLoggedIn && to.meta?.managerOnly && !isManager()) {
+    return next({ name: 'Dialer' })
+  }
+
   const isAdminUser = isLoggedIn && (isAdmin() || user === 'Administrator')
+
+  // System Manager / Administrator home is Frappe Desk, not CRM.
+  if (isAdminUser) {
+    window.location.href = '/desk'
+    return next(false)
+  }
 
   // Only admins who haven't finished may reach the wizard, even via direct URL.
   if (isLoggedIn && to.name === 'Onboarding') {
@@ -228,6 +310,8 @@ router.beforeEach(async (to, from, next) => {
     } else {
       next({ name: route_name, params: { viewType: type } })
     }
+  } else if (!isLoggedIn && to.meta?.public) {
+    next()
   } else if (!isLoggedIn) {
     window.location.href = '/login?redirect-to=/crm'
   } else if (to.matched.length === 0) {
@@ -267,7 +351,10 @@ router.beforeEach(async (to, from, next) => {
       }
 
       const doctype = doctypeMap[to.name]
-      let defaultViewType = 'list'
+      // Leads and Deals open as kanban unless the user saved a different default.
+      let defaultViewType = ['Leads', 'Deals'].includes(to.name)
+        ? 'kanban'
+        : 'list'
 
       let globalDefault = getDefaultView(to.name)
       if (globalDefault) {

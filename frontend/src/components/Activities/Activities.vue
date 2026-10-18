@@ -6,11 +6,19 @@
     v-model:emailBox="emailBox"
     :title="title"
     :doc="doc"
+    :doctype="doctype"
+    :docname="docname"
     :whatsappBox="whatsappBox"
     :modalRef="modalRef"
   />
   <FadedScrollableDiv class="flex flex-col h-full overflow-y-auto">
-    <InsuranceRecords v-if="['Quotes', 'Applications', 'Policies'].includes(title)" :key="title" :deal="docname" :kind="title" />
+    <InsuranceRecords
+      v-if="['Quotes', 'Applications', 'Policies'].includes(title)"
+      :key="title"
+      :deal="docname"
+      :kind="title"
+      @journey-updated="emit('journey-updated')"
+    />
     <QuotationsList v-else-if="title == 'Quotations'" :deal="docname" />
     <div
       v-else-if="all_activities?.loading"
@@ -589,7 +597,7 @@ const props = defineProps({
   tabs: { type: Array, default: () => [] },
 })
 
-const emit = defineEmits(['beforeSave', 'afterSave'])
+const emit = defineEmits(['beforeSave', 'afterSave', 'journey-updated'])
 
 const route = useRoute()
 

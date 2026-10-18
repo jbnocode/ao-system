@@ -11,6 +11,8 @@ app_icon_route = "/crm"
 # Apps
 # ------------------
 
+# Soft dependency: native booking uses frappe_appointment when installed
+# (bench get-app https://github.com/rtCamp/frappe-appointment.git --branch version-16).
 # required_apps = []
 add_to_apps_screen = [
 	{
@@ -66,10 +68,14 @@ doctype_js = {
 # application home page (will override Website Settings)
 # home_page = "login"
 
-# website user home page (by Role)
-# role_home_page = {
-# "Role": "home_page"
-# }
+# System Manager / Administrator → desk; Sales roles → crm (see session helper)
+get_website_user_home_page = ["crm.api.session.get_website_user_home_page"]
+
+# website user home page (by Role) — fallback if the hook returns None
+role_home_page = {
+	"Sales User": "crm",
+	"Sales Manager": "crm",
+}
 
 website_route_rules = [
 	{"from_route": "/crm/<path:app_path>", "to_route": "crm"},
@@ -138,6 +144,7 @@ before_uninstall = "crm.uninstall.before_uninstall"
 permission_query_conditions = {
 	"CRM Lead": "crm.permissions.org_hierarchy.get_lead_permission_query_conditions",
 	"CRM Deal": "crm.permissions.org_hierarchy.get_deal_permission_query_conditions",
+	"CRM Call Log": "crm.fcrm.doctype.crm_call_log.crm_call_log.get_permission_query_conditions",
 	"CRM Notification": "crm.fcrm.doctype.crm_notification.crm_notification.get_permission_query_conditions",
 	"CRM Enrichment Run": "crm.domain_enrichment.doctype.crm_enrichment_run.crm_enrichment_run.get_permission_query_conditions",
 }
@@ -145,6 +152,7 @@ permission_query_conditions = {
 has_permission = {
 	"CRM Lead": "crm.permissions.org_hierarchy.has_lead_permission",
 	"CRM Deal": "crm.permissions.org_hierarchy.has_deal_permission",
+	"CRM Call Log": "crm.fcrm.doctype.crm_call_log.crm_call_log.has_permission",
 	"CRM Notification": "crm.fcrm.doctype.crm_notification.crm_notification.has_permission",
 	"CRM Enrichment Run": "crm.domain_enrichment.doctype.crm_enrichment_run.crm_enrichment_run.has_permission",
 }
@@ -269,6 +277,10 @@ doc_events = {
 			"crm.automation.events.on_whatsapp_message",
 		],
 	},
+	"CRM SMS Message": {
+		"validate": ["crm.api.sms.validate"],
+		"on_update": ["crm.api.sms.on_update"],
+	},
 	"CRM Deal": {
 		"on_update": [
 			"crm.fcrm.doctype.erpnext_crm_settings.erpnext_crm_settings.create_customer_in_erpnext",
@@ -277,6 +289,11 @@ doc_events = {
 	},
 	"CRM Lead": {
 		"on_update": ["crm.automation.events.on_lead_update"],
+	},
+	"Email Unsubscribe": {
+		"after_insert": [
+			"crm.fcrm.doctype.crm_email_campaign.crm_email_campaign.unsubscribe_recipient",
+		],
 	},
 	"Sales Order": {
 		"before_validate": [
@@ -328,6 +345,7 @@ scheduler_events = {
 		"crm.fcrm.doctype.crm_invitation.crm_invitation.expire_invitations",
 		"crm.fcrm.doctype.crm_view_settings.crm_view_settings.clear_old_versions",
 		"crm.telemetry.capture_feature_state",
+		"crm.fcrm.doctype.crm_email_campaign.crm_email_campaign.process_email_campaigns",
 	],
 	"daily_long": ["crm.lead_syncing.background_sync.sync_leads_from_sources_daily"],
 	"hourly_long": ["crm.lead_syncing.background_sync.sync_leads_from_sources_hourly"],
@@ -369,7 +387,7 @@ ignore_links_on_delete = ["Failed Lead Sync Log"]
 
 # Request Events
 # ----------------
-# before_request = ["crm.utils.before_request"]
+before_request = ["crm.utils.block_desk_for_tenants"]
 # after_request = ["crm.utils.after_request"]
 
 # Job Events
@@ -419,13 +437,6 @@ after_migrate = [
 ]
 
 standard_dropdown_items = [
-	{
-		"name1": "app_selector",
-		"label": "Apps",
-		"type": "Route",
-		"route": "#",
-		"is_standard": 1,
-	},
 	{
 		"name1": "settings",
 		"label": "Settings",

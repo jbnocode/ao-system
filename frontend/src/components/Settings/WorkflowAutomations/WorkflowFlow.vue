@@ -5,6 +5,7 @@
     :nodes="flowNodes"
     :edges="edges"
     class="workflow-flow"
+    :node-origin="[0.5, 0]"
     :fit-view-options="fitViewOptions"
     :nodes-draggable="!readonly"
     :nodes-connectable="false"
@@ -81,14 +82,14 @@
     </Panel>
     <template #node-automation="{ id, data }">
       <div class="relative">
-        <div class="flex items-center">
+        <div class="flex flex-col items-center">
           <div class="relative w-[212px] shrink-0">
             <Handle
               v-if="!data.isTrigger"
               id="input"
               class="workflow-port"
               type="target"
-              :position="Position.Left"
+              :position="Position.Top"
             />
             <Combobox
               :options="triggerGroups"
@@ -186,19 +187,19 @@
               id="output"
               class="workflow-port"
               type="source"
-              :position="Position.Right"
+              :position="Position.Bottom"
             />
           </div>
           <div
             v-if="showAdd(data)"
-            class="workflow-add-control nodrag flex items-center"
+            class="workflow-add-control nodrag flex flex-col items-center"
             @click.stop
           >
-            <span class="h-px w-5 bg-outline-gray-3" />
+            <span class="h-5 w-px bg-outline-gray-3" />
             <Combobox
               :options="blockGroups"
               trigger="button"
-              side="right"
+              side="bottom"
               :placeholder="__('Search blocks')"
               @update:model-value="addBlock(data, null, $event)"
             >
@@ -235,39 +236,37 @@
         </div>
         <div
           v-if="(data.arms?.length || data.canContinue) && !readonly"
-          class="workflow-add-control nodrag absolute left-[calc(100%+12px)] top-1/2 flex -translate-y-1/2 flex-col gap-1.5"
+          class="workflow-add-control nodrag absolute left-1/2 top-[calc(100%+12px)] flex w-max -translate-x-1/2 flex-col items-center gap-1.5"
           @click.stop
         >
-          <Combobox
-            v-for="arm in data.arms"
-            :key="arm.branch"
-            :options="blockGroups"
-            trigger="button"
-            side="right"
-            :placeholder="__('Search blocks')"
-            @update:model-value="addBlock(data, arm.branch, $event)"
-          >
-            <template #item-prefix="{ item }">
-              <WorkflowComboboxIcon :item="item" />
-            </template>
-            <template #item-label="{ item }">
-              <WorkflowComboboxOption :item="item" />
-            </template>
-            <template #trigger>
-              <Button
-                icon-left="lucide-plus"
-                size="sm"
-                :class="arm.branch === 'Else' ? 'mt-2' : ''"
-              >
-                {{ arm.label }}
-              </Button>
-            </template>
-          </Combobox>
+          <div class="flex items-center gap-1.5">
+            <Combobox
+              v-for="arm in data.arms"
+              :key="arm.branch"
+              :options="blockGroups"
+              trigger="button"
+              side="bottom"
+              :placeholder="__('Search blocks')"
+              @update:model-value="addBlock(data, arm.branch, $event)"
+            >
+              <template #item-prefix="{ item }">
+                <WorkflowComboboxIcon :item="item" />
+              </template>
+              <template #item-label="{ item }">
+                <WorkflowComboboxOption :item="item" />
+              </template>
+              <template #trigger>
+                <Button icon-left="lucide-plus" size="sm">
+                  {{ arm.label }}
+                </Button>
+              </template>
+            </Combobox>
+          </div>
           <Combobox
             v-if="data.canContinue"
             :options="blockGroups"
             trigger="button"
-            side="right"
+            side="bottom"
             :placeholder="__('Search blocks')"
             @update:model-value="addBlock(data, null, $event)"
           >
@@ -278,7 +277,7 @@
               <WorkflowComboboxOption :item="item" />
             </template>
             <template #trigger>
-              <Button icon-left="lucide-plus" size="sm" class="ml-6">
+              <Button icon-left="lucide-plus" size="sm">
                 {{ __('After branches') }}
               </Button>
             </template>
@@ -576,7 +575,6 @@ function addBlock(data, branch, value) {
 
 .workflow-flow .workflow-port {
   z-index: 20 !important;
-  top: calc(50% + 4px);
   width: 6px !important;
   min-width: 6px !important;
   height: 6px !important;

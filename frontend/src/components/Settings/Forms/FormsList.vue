@@ -1,9 +1,12 @@
 <template>
-  <div class="flex h-full flex-col gap-6 p-6 text-ink-gray-8">
-    <!-- Header -->
-    <div class="flex justify-between px-2 pt-2">
+  <div
+    class="flex h-full flex-col text-ink-gray-8"
+    :class="hidePageHeader ? 'gap-4 p-5' : 'gap-6 p-6'"
+  >
+    <!-- Header (hidden when the page already uses LayoutHeader) -->
+    <div v-if="!hidePageHeader" class="flex justify-between px-2 pt-2">
       <div class="flex flex-col gap-1 w-9/12">
-        <h2 class="flex gap-2 text-2xl-semibold leading-none h-5">
+        <h2 class="flex gap-2 text-2xl-semibold leading-tight">
           {{ __('Forms') }}
         </h2>
         <p class="text-p-base text-ink-gray-6">
@@ -15,12 +18,14 @@
         </p>
       </div>
       <div class="flex item-center space-x-2 w-3/12 justify-end">
-        <Button
-          :label="__('New')"
-          icon-left="lucide-plus"
-          variant="solid"
-          @click="openCreate"
-        />
+        <Dropdown :options="createMenuOptions">
+          <Button
+            :label="__('New')"
+            icon-left="lucide-plus"
+            icon-right="lucide-chevron-down"
+            variant="solid"
+          />
+        </Dropdown>
       </div>
     </div>
 
@@ -88,10 +93,17 @@
     </div>
   </div>
 
-  <!-- create dialog -->
+  <!-- create dialog (title / route only — templates live in the library) -->
   <Dialog v-model:open="showCreate" :title="__('New form')">
     <template #default>
       <div class="flex flex-col gap-4">
+        <p
+          v-if="selectedTemplateLabel"
+          class="rounded-4 bg-surface-gray-2 px-3 py-2 text-p-sm text-ink-gray-6"
+        >
+          {{ __('Template') }}:
+          <span class="text-ink-gray-8">{{ selectedTemplateLabel }}</span>
+        </p>
         <FormControl
           v-model="draft.title"
           type="text"
@@ -104,6 +116,7 @@
           type="select"
           :label="__('Maps to')"
           :options="targetOptions"
+          :disabled="Boolean(draft.template)"
         />
         <div>
           <div class="mb-1.5 text-sm text-ink-gray-5">{{ __('Route') }}</div>
@@ -133,6 +146,50 @@
       />
     </template>
   </Dialog>
+
+  <!-- template library -->
+  <Dialog
+    v-model:open="showLibrary"
+    :title="__('Form templates')"
+    size="lg"
+  >
+    <template #default>
+      <div
+        class="max-h-[calc(100dvh-12rem)] overflow-y-auto overscroll-contain"
+      >
+        <div
+          v-if="templates.loading && !templates.data"
+          class="flex justify-center py-8"
+        >
+          <LoadingIndicator class="w-4" />
+        </div>
+        <div v-else class="flex flex-col gap-5">
+          <div v-for="group in templateGroups" :key="group.label">
+            <div class="mb-2 text-sm text-ink-gray-5">{{ group.label }}</div>
+            <div class="flex flex-col gap-1.5">
+              <button
+                v-for="t in group.items"
+                :key="t.id"
+                type="button"
+                class="flex w-full flex-col gap-0.5 rounded-4 border border-outline-gray-2 px-3 py-2.5 text-left transition-colors hover:bg-surface-gray-1"
+                @click="useTemplate(t)"
+              >
+                <span class="text-base-medium text-ink-gray-8">{{
+                  t.title
+                }}</span>
+                <span class="text-p-sm text-ink-gray-5">{{
+                  t.description
+                }}</span>
+                <span class="mt-0.5 text-xs text-ink-gray-4">{{
+                  docLabel(t.document_type)
+                }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+  </Dialog>
 </template>
 
 <script setup>
@@ -152,32 +209,50 @@ import {
 import { useTelemetry } from '@framework/ui/telemetry'
 import { useOnboarding } from '@framework/ui/components/Onboarding'
 import LucideTextCursorInput from '~icons/lucide/text-cursor-input'
-import { ref, reactive, h } from 'vue'
+import { ref, reactive, h, computed } from 'vue'
 import { ConfirmDelete, copyToClipboard } from '../../../utils'
+import { useLifeAgencyMode } from '@/composables/lifeAgency'
+
+defineProps({
+  /** Full-page mode: title/New live in LayoutHeader instead of the body. */
+  hidePageHeader: { type: Boolean, default: false },
+})
 
 const emit = defineEmits(['open'])
 const { capture } = useTelemetry()
 const { updateOnboardingStep } = useOnboarding('frappecrm')
+const { dealSingular } = useLifeAgencyMode()
 
 const isConfirmingDelete = ref(false)
 
-const targetOptions = [
-  { label: 'Lead', value: 'CRM Lead' },
-  { label: 'Deal', value: 'CRM Deal' },
-]
-const docLabel = (dt) => targetOptions.find((o) => o.value === dt)?.label || dt
+const targetOptions = computed(() => [
+  { label: __('Lead'), value: 'CRM Lead' },
+  { label: dealSingular.value, value: 'CRM Deal' },
+])
+const docLabel = (dt) =>
+  targetOptions.value.find((o) => o.value === dt)?.label || dt
 
 const forms = createResource({
   url: 'crm.api.form.list_forms',
   auto: true,
 })
 
-// create dialog: title, maps-to and route captured up front (maps-to governs
-// which fields are available, so it's a first-class creation choice)
+const templates = createResource({
+  url: 'crm.api.form.list_form_templates',
+  auto: true,
+  cache: 'crmFormTemplates',
+})
+
 const showCreate = ref(false)
+const showLibrary = ref(false)
 const creating = ref(false)
 const createError = ref('')
-const draft = reactive({ title: '', route: '', document_type: 'CRM Lead' })
+const draft = reactive({
+  title: '',
+  route: '',
+  document_type: 'CRM Lead',
+  template: null,
+})
 let routeEdited = false
 
 function slugify(v) {
@@ -188,17 +263,77 @@ function slugify(v) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
 }
+
+const selectedTemplateLabel = computed(() => {
+  if (!draft.template) return ''
+  return (templates.data || []).find((t) => t.id === draft.template)?.title || ''
+})
+
+const templateGroups = computed(() => {
+  const list = templates.data || []
+  const groups = []
+  const general = list.filter((t) => t.category === 'general')
+  const insurance = list.filter((t) => t.category === 'insurance')
+  if (general.length) {
+    groups.push({ label: __('General'), items: general })
+  }
+  if (insurance.length) {
+    groups.push({ label: __('Insurance'), items: insurance })
+  }
+  return groups
+})
+
+/** Blank create dialog — default Lead layout, no template. */
 function openCreate() {
   draft.title = ''
   draft.route = ''
   draft.document_type = 'CRM Lead'
+  draft.template = null
   routeEdited = false
   createError.value = ''
   showCreate.value = true
 }
+
+function openTemplateLibrary() {
+  showLibrary.value = true
+  if (!templates.data) templates.reload()
+}
+
+/** Pick from library → create dialog with template defaults. */
+function useTemplate(t) {
+  showLibrary.value = false
+  draft.template = t.id
+  draft.document_type = t.document_type
+  draft.title = t.default_title || ''
+  draft.route = t.default_route || slugify(draft.title)
+  routeEdited = Boolean(t.default_route)
+  createError.value = ''
+  showCreate.value = true
+}
+
 function onTitleInput(e) {
   if (!routeEdited) draft.route = slugify(e?.target?.value ?? draft.title)
 }
+
+const createMenuOptions = computed(() => [
+  {
+    group: __('Create'),
+    hideLabel: true,
+    options: [
+      {
+        label: __('New form'),
+        icon: 'lucide-plus',
+        onClick: () => openCreate(),
+      },
+      {
+        label: __('Templates'),
+        icon: 'lucide-layout-template',
+        onClick: () => openTemplateLibrary(),
+      },
+    ],
+  },
+])
+
 // clicking the /crm-form/ prefix or box padding focuses the slug at the end
 function focusRouteEnd(e) {
   if (e.target.tagName === 'INPUT') return
@@ -218,9 +353,17 @@ async function createForm() {
   try {
     const doc = await call('crm.api.form.save_form', {
       name: null,
-      form: { title: draft.title, route, document_type: draft.document_type },
+      form: {
+        title: draft.title,
+        route,
+        document_type: draft.document_type,
+        template: draft.template || null,
+      },
     })
-    capture('form_created', { doctype: draft.document_type })
+    capture('form_created', {
+      doctype: draft.document_type,
+      template: draft.template || null,
+    })
     updateOnboardingStep('create_first_web_form', true)
     showCreate.value = false
     emit('open', doc.name)
@@ -283,5 +426,10 @@ function rowOptions(form) {
   ]
 }
 
-defineExpose({ reload: () => forms.reload() })
+defineExpose({
+  reload: () => forms.reload(),
+  openCreate,
+  openTemplateLibrary,
+  createMenuOptions,
+})
 </script>

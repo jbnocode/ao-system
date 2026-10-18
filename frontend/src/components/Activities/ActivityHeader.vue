@@ -84,15 +84,23 @@ import NoteIcon from '@/components/Icons/NoteIcon.vue'
 import TaskIcon from '@/components/Icons/TaskIcon.vue'
 import AttachmentIcon from '@/components/Icons/AttachmentIcon.vue'
 import WhatsAppIcon from '@/components/Icons/WhatsAppIcon.vue'
+import LucidePhoneCall from '~icons/lucide/phone-call'
 import { globalStore } from '@/stores/global'
 import { whatsappEnabled } from '@/composables/whatsapp'
 import { callEnabled } from '@/composables/telephony'
+import {
+  aiCallReady,
+  loadAiCallReady,
+  startAiOutboundCall,
+} from '@/composables/aiOutbound'
 import { Dropdown } from 'frappe-ui'
-import { computed, h } from 'vue'
+import { computed, h, onMounted } from 'vue'
 
 const props = defineProps({
   title: { type: String, default: '' },
   doc: { type: Object, default: () => ({}) },
+  doctype: { type: String, default: 'CRM Lead' },
+  docname: { type: String, default: '' },
   modalRef: { type: Object, default: () => ({}) },
   whatsappBox: { type: Object, default: () => ({}) },
 })
@@ -105,6 +113,25 @@ const showWhatsappTemplates = defineModel('showWhatsappTemplates', {
 })
 const showFilesUploader = defineModel('showFilesUploader', { type: Boolean })
 const emailBox = defineModel('emailBox', { type: Object, default: () => ({}) })
+
+onMounted(() => loadAiCallReady())
+
+function aiCallFromDoc() {
+  const doctype = props.doctype
+  const name = props.docname || props.doc?.name
+  let mobile = props.doc?.mobile_no
+  if (doctype === 'CRM Deal' && !mobile) {
+    // Deal primary number may live on contacts; header still tries doc.mobile_no
+    mobile = props.doc?.mobile_no || props.doc?.phone
+  }
+  startAiOutboundCall({
+    toNumber: mobile,
+    referenceDoctype:
+      doctype === 'CRM Deal' || doctype === 'CRM Lead' ? doctype : null,
+    referenceDocname:
+      doctype === 'CRM Deal' || doctype === 'CRM Lead' ? name : null,
+  })
+}
 
 const defaultActions = computed(() => {
   let actions = [
@@ -128,6 +155,12 @@ const defaultActions = computed(() => {
       label: __('Make a Call'),
       onClick: () => makeCall(props.doc.mobile_no),
       condition: () => callEnabled.value,
+    },
+    {
+      icon: h(LucidePhoneCall, { class: 'h-4 w-4' }),
+      label: __('AI Call'),
+      onClick: aiCallFromDoc,
+      condition: () => aiCallReady.value,
     },
     {
       icon: h(NoteIcon, { class: 'h-4 w-4' }),
@@ -168,6 +201,12 @@ const callActions = computed(() => {
       icon: h(PhoneIcon, { class: 'h-4 w-4' }),
       onClick: () => makeCall(props.doc.mobile_no),
       condition: () => callEnabled.value,
+    },
+    {
+      label: __('AI Call'),
+      icon: h(LucidePhoneCall, { class: 'h-4 w-4' }),
+      onClick: aiCallFromDoc,
+      condition: () => aiCallReady.value,
     },
   ]
 

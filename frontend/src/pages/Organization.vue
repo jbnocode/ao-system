@@ -13,6 +13,7 @@
         :actions="organization._actions"
       />
       <EnrichFromWebsite
+        v-if="!lifeAgencyMode"
         doctype="CRM Organization"
         :docname="props.organizationId"
         :website="organization.doc?.website"
@@ -55,7 +56,7 @@
     <Resizer
       v-if="organization.doc"
       :parent="$refs.parentRef"
-      class="flex h-full flex-col overflow-hidden border-r"
+      class="flex h-full flex-col overflow-hidden"
     >
       <div class="border-b">
         <FileUploader
@@ -267,6 +268,7 @@ import {
   call,
 } from 'frappe-ui'
 import { useDoctypeModal } from '@/composables/doctypeModal'
+import { useLifeAgencyMode } from '@/composables/lifeAgency'
 import { useTelemetry } from '@framework/ui/telemetry'
 import { computed, ref, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -276,6 +278,7 @@ const props = defineProps({
 })
 
 const { brand } = getSettings()
+const { lifeAgencyMode } = useLifeAgencyMode()
 const { $dialog, $socket } = globalStore()
 const { getUser } = usersStore()
 const { getDealStatus } = statusesStore()

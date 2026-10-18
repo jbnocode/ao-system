@@ -26,6 +26,8 @@ class CRMExotelSettings(Document):
 	# end: auto-generated types
 
 	def validate(self):
+		if frappe.session.user != "Administrator" and "System Manager" not in frappe.get_roles():
+			frappe.throw(_("Only a System Manager can configure Exotel credentials."), frappe.PermissionError)
 		self.verify_credentials()
 
 	def verify_credentials(self):

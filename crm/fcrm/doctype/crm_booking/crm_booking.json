@@ -1,0 +1,193 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-10-18 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "booking_profile",
+  "agent_user",
+  "column_break_status",
+  "status",
+  "provider",
+  "section_guest",
+  "guest_name",
+  "guest_email",
+  "column_break_phone",
+  "guest_phone",
+  "guest_notes",
+  "section_schedule",
+  "starts_on",
+  "ends_on",
+  "column_break_event",
+  "event",
+  "timezone",
+  "meeting_provider",
+  "meeting_link"
+ ],
+ "fields": [
+  {
+   "fieldname": "booking_profile",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Booking Profile",
+   "options": "CRM Booking Profile",
+   "reqd": 1
+  },
+  {
+   "fieldname": "agent_user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Agent",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Scheduled",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Scheduled\nCancelled\nCompleted",
+   "reqd": 1
+  },
+  {
+   "default": "Native",
+   "fieldname": "provider",
+   "fieldtype": "Select",
+   "label": "Provider",
+   "options": "Native\nCalendly",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_guest",
+   "fieldtype": "Section Break",
+   "label": "Guest"
+  },
+  {
+   "fieldname": "guest_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Guest Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "guest_email",
+   "fieldtype": "Data",
+   "label": "Guest Email",
+   "options": "Email"
+  },
+  {
+   "fieldname": "column_break_phone",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "guest_phone",
+   "fieldtype": "Data",
+   "label": "Guest Phone",
+   "options": "Phone"
+  },
+  {
+   "fieldname": "guest_notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "section_schedule",
+   "fieldtype": "Section Break",
+   "label": "Schedule"
+  },
+  {
+   "fieldname": "starts_on",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Starts On",
+   "reqd": 1
+  },
+  {
+   "fieldname": "ends_on",
+   "fieldtype": "Datetime",
+   "label": "Ends On",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_event",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "event",
+   "fieldtype": "Link",
+   "label": "Event",
+   "options": "Event",
+   "read_only": 1
+  },
+  {
+   "fieldname": "timezone",
+   "fieldtype": "Data",
+   "label": "Timezone",
+   "read_only": 1
+  },
+  {
+   "default": "None",
+   "fieldname": "meeting_provider",
+   "fieldtype": "Select",
+   "label": "Meeting Provider",
+   "options": "None\nGoogle Meet\nZoom",
+   "read_only": 1
+  },
+  {
+   "fieldname": "meeting_link",
+   "fieldtype": "Data",
+   "label": "Meeting Link",
+   "options": "URL",
+   "read_only": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-10-18 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "FCRM",
+ "name": "CRM Booking",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "write": 1,
+   "role": "Sales User"
+  }
+ ],
+ "sort_field": "starts_on",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

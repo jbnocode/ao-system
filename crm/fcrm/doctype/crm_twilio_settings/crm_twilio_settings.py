@@ -30,6 +30,8 @@ class CRMTwilioSettings(Document):
 	friendly_resource_name = "Frappe CRM"  # System creates TwiML app & API keys with this name.
 
 	def validate(self):
+		if frappe.session.user != "Administrator" and "System Manager" not in frappe.get_roles():
+			frappe.throw(_("Only a System Manager can configure Twilio credentials."), frappe.PermissionError)
 		old_account_sid = frappe.db.get_single_value("CRM Twilio Settings", "account_sid")
 		if self.account_sid != old_account_sid:
 			self.new_sid = True

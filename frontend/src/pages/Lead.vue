@@ -17,25 +17,12 @@
         :actions="document.actions"
       />
       <EnrichFromWebsite
+        v-if="!lifeAgencyMode"
         doctype="CRM Lead"
         :docname="leadId"
         :website="doc.website"
         @done="onEnriched"
       />
-      <AssignTo v-model="assignees.data" doctype="CRM Lead" :docname="leadId" />
-      <Dropdown v-if="doc && document.statuses" :options="statuses" align="end">
-        <template #default="{ open }">
-          <Button
-            v-if="doc.status"
-            :label="statusLabel(doc.status)"
-            :iconRight="open ? 'lucide-chevron-up' : 'lucide-chevron-down'"
-          >
-            <template #prefix>
-              <IndicatorIcon :class="getLeadStatus(doc.status).color" />
-            </template>
-          </Button>
-        </template>
-      </Dropdown>
       <Tooltip
         :disabled="!isLeadConversionDisabled"
         :text="__('Cannot convert a lost lead to deal')"
@@ -49,6 +36,24 @@
           />
         </div>
       </Tooltip>
+    </template>
+    <template v-if="!errorTitle" #below-header>
+      <AssignTo v-model="assignees.data" doctype="CRM Lead" :docname="leadId" />
+      <div v-if="doc && document.statuses" class="ml-auto">
+        <Dropdown :options="statuses" align="end">
+          <template #default="{ open }">
+            <Button
+              v-if="doc.status"
+              :label="statusLabel(doc.status)"
+              :iconRight="open ? 'lucide-chevron-up' : 'lucide-chevron-down'"
+            >
+              <template #prefix>
+                <IndicatorIcon :class="getLeadStatus(doc.status).color" />
+              </template>
+            </Button>
+          </template>
+        </Dropdown>
+      </div>
     </template>
   </LayoutHeader>
   <div v-if="doc.name" class="flex h-full overflow-hidden">
@@ -70,12 +75,27 @@
         />
       </template>
     </Tabs>
-    <Resizer class="flex flex-col justify-between border-l" side="right">
+    <Resizer
+      class="flex flex-col justify-between"
+      side="right"
+      collapsible
+      v-slot="{ collapse }"
+    >
       <div
-        class="flex h-[45px] cursor-copy items-center border-b px-5 py-2.5 text-lg-medium text-ink-gray-9"
-        @click="copyToClipboard(leadId)"
+        class="flex h-[45px] items-center gap-2 border-b px-3 py-2.5 text-lg-medium text-ink-gray-9"
       >
-        {{ __(leadId) }}
+        <div
+          class="min-w-0 flex-1 cursor-copy truncate px-2"
+          @click="copyToClipboard(leadId)"
+        >
+          {{ __(leadId) }}
+        </div>
+        <Button
+          :tooltip="__('Collapse')"
+          variant="ghost"
+          icon="lucide-panel-right-close"
+          @click="collapse"
+        />
       </div>
       <FileUploader
         :validateFile="validateIsImageFile"
@@ -144,6 +164,13 @@
                             __('Please set a mobile number to make calls'),
                           )
                   "
+                />
+                <Button
+                  v-if="aiCallReady"
+                  :tooltip="__('AI Call')"
+                  :icon="LucidePhoneCall"
+                  :loading="aiCallBusy"
+                  @click="triggerAiCall"
                 />
 
                 <Button
@@ -254,6 +281,7 @@ import Email2Icon from '@/components/Icons/Email2Icon.vue'
 import CommentIcon from '@/components/Icons/CommentIcon.vue'
 import DetailsIcon from '@/components/Icons/DetailsIcon.vue'
 import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
+import LucidePhoneCall from '~icons/lucide/phone-call'
 import TaskIcon from '@/components/Icons/TaskIcon.vue'
 import NoteIcon from '@/components/Icons/NoteIcon.vue'
 import WhatsAppIcon from '@/components/Icons/WhatsAppIcon.vue'
@@ -286,6 +314,12 @@ import { getMeta } from '@/stores/meta'
 import { useDocument } from '@/data/document'
 import { whatsappEnabled } from '@/composables/whatsapp'
 import { callEnabled } from '@/composables/telephony'
+import {
+  aiCallBusy,
+  aiCallReady,
+  loadAiCallReady,
+  startAiOutboundCall,
+} from '@/composables/aiOutbound'
 import { useCommandPaletteContext } from '@/composables/useCommandPalette'
 import { flattenCommandActions } from '@/utils/commandPalette'
 import { recordCommands } from '@/components/CommandPalette/recordCommands'
@@ -304,6 +338,7 @@ import {
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useActiveTabManager } from '@/composables/useActiveTabManager'
+import { useLifeAgencyMode } from '@/composables/lifeAgency'
 import { useUnsavedChangesWarning } from '@/composables/useUnsavedChangesWarning'
 import { useVisitedRecords } from '@/composables/useVisitedRecords'
 
@@ -311,6 +346,7 @@ const { brand } = getSettings()
 const { $dialog, $socket, makeCall } = globalStore()
 const { statusOptions, getLeadStatus } = statusesStore()
 const { doctypeMeta } = getMeta('CRM Lead')
+const { lifeAgencyMode } = useLifeAgencyMode()
 
 const route = useRoute()
 const router = useRouter()
@@ -351,6 +387,7 @@ const { markVisited } = useVisitedRecords('CRM Lead')
 onMounted(async () => {
   if (document.doc) await triggerOnRender()
   markVisited(props.leadId)
+  loadAiCallReady()
 })
 
 watch(error, (err) => {
@@ -521,7 +558,24 @@ function communicationCommands() {
       perform: () => makeCall(doc.value.mobile_no),
     })
   }
+  if (doc.value.mobile_no && aiCallReady.value) {
+    commands.push({
+      id: 'lead-ai-call',
+      title: 'AI call',
+      group: 'Lead',
+      icon: 'phone-call',
+      perform: triggerAiCall,
+    })
+  }
   return commands
+}
+
+function triggerAiCall() {
+  startAiOutboundCall({
+    toNumber: doc.value.mobile_no,
+    referenceDoctype: 'CRM Lead',
+    referenceDocname: props.leadId,
+  })
 }
 
 function scriptCommands() {

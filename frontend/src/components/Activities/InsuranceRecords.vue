@@ -51,6 +51,15 @@
             <div class="font-medium">{{ money(r.monthly_premium) }}</div>
           </div>
         </div>
+        <div v-if="convertLabel(r)" class="mt-3">
+          <Button
+            size="sm"
+            variant="subtle"
+            :label="convertLabel(r)"
+            :loading="converting === r.name"
+            @click="convert(r)"
+          />
+        </div>
       </div>
     </div>
     <Dialog v-model:open="show" :title="__('New') + ' ' + cfg.singular" @close="show = false">
@@ -83,11 +92,16 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
 import { Badge, Button, Dialog, ErrorMessage, FormControl, call, createListResource, toast } from 'frappe-ui'
+import { statusesStore } from '@/stores/statuses'
 
 const props = defineProps({
   deal: { type: String, required: true },
   kind: { type: String, required: true },
 })
+
+const emit = defineEmits(['journey-updated'])
+
+const { dealStatuses } = statusesStore()
 
 const KINDS = {
   Quotes: {
@@ -135,6 +149,7 @@ const rows = computed(() => list.data || [])
 
 const show = ref(false)
 const saving = ref(false)
+const converting = ref('')
 const error = ref('')
 const form = reactive({ carrier: '', product: '', face_amount: '', monthly_premium: '', status: '', date: '', extra: '' })
 
@@ -163,6 +178,8 @@ async function create() {
     show.value = false
     list.reload()
     toast.success(cfg.value.singular + ' created')
+    maybeSuggestDealStatus(form.status)
+    emit('journey-updated')
   } catch (e) {
     error.value = e?.messages?.join(' ') || e?.message || 'Could not save'
   } finally {
@@ -175,9 +192,71 @@ async function setStatus(r, value) {
   try {
     await call('frappe.client.set_value', { doctype: cfg.value.doctype, name: r.name, fieldname: 'status', value })
     list.reload()
+    maybeSuggestDealStatus(value)
+    emit('journey-updated')
   } catch (e) {
     toast.error('Could not change status')
   }
+}
+
+function convertLabel(r) {
+  if (props.kind === 'Quotes' && ['Presented', 'Accepted', 'Draft'].includes(r.status)) {
+    return __('Create application')
+  }
+  if (props.kind === 'Applications' && ['Approved', 'Issued', 'Underwriting'].includes(r.status)) {
+    return __('Create policy')
+  }
+  return ''
+}
+
+async function convert(r) {
+  converting.value = r.name
+  try {
+    if (props.kind === 'Quotes') {
+      const res = await call('crm.life.api.convert_quote_to_application', { quote: r.name })
+      toast.success(__('Application {0} created', [res.application]))
+      if (res.deal_status) {
+        toast.info(__('Deal moved to {0}', [res.deal_status]))
+        dealStatuses.reload()
+      }
+    } else if (props.kind === 'Applications') {
+      const res = await call('crm.life.api.convert_application_to_policy', {
+        application: r.name,
+      })
+      toast.success(__('Policy {0} created', [res.policy]))
+      if (res.deal_status) {
+        toast.info(__('Deal moved to {0}', [res.deal_status]))
+        dealStatuses.reload()
+      }
+    }
+    list.reload()
+    emit('journey-updated')
+  } catch (e) {
+    toast.error(e?.messages?.join?.(' ') || e?.message || __('Could not convert'))
+  } finally {
+    converting.value = ''
+  }
+}
+
+const STATUS_HINTS = {
+  Quotes: { Presented: 'Quoted', Accepted: 'Application Submitted' },
+  Applications: {
+    Submitted: 'Application Submitted',
+    Underwriting: 'Underwriting',
+    Approved: 'Approved',
+    Issued: 'Policy Delivered',
+    Declined: 'Declined',
+  },
+  Policies: {
+    Pending: 'Approved',
+    'In Force': 'Policy Delivered',
+  },
+}
+
+function maybeSuggestDealStatus(recordStatus) {
+  const suggested = STATUS_HINTS[props.kind]?.[recordStatus]
+  if (!suggested) return
+  toast.info(__('Suggested deal stage: {0} (use Life journey strip to apply)', [suggested]))
 }
 
 function dateOf(r) {

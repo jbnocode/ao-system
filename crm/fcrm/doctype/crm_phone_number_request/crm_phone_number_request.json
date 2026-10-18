@@ -1,0 +1,156 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-10-18 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "status",
+  "requested_by",
+  "requested_by_name",
+  "column_break_assign",
+  "assign_to",
+  "assign_to_name",
+  "section_prefs",
+  "country_code",
+  "area_code",
+  "column_break_result",
+  "phone_number",
+  "fulfilled_on",
+  "section_notes",
+  "notes",
+  "error_message"
+ ],
+ "fields": [
+  {
+   "default": "Requested",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Requested\nFulfilled\nCancelled\nFailed",
+   "reqd": 1
+  },
+  {
+   "default": "__user",
+   "fieldname": "requested_by",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Requested By",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "requested_by.full_name",
+   "fieldname": "requested_by_name",
+   "fieldtype": "Data",
+   "label": "Requested By Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_assign",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "assign_to",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Assign To",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "assign_to.full_name",
+   "fieldname": "assign_to_name",
+   "fieldtype": "Data",
+   "label": "Assign To Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_prefs",
+   "fieldtype": "Section Break",
+   "label": "Preferences"
+  },
+  {
+   "default": "US",
+   "fieldname": "country_code",
+   "fieldtype": "Data",
+   "label": "Country Code",
+   "reqd": 1
+  },
+  {
+   "fieldname": "area_code",
+   "fieldtype": "Data",
+   "label": "Area Code"
+  },
+  {
+   "fieldname": "column_break_result",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "phone_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Phone Number",
+   "options": "Phone",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fulfilled_on",
+   "fieldtype": "Datetime",
+   "label": "Fulfilled On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_notes",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "error_message",
+   "fieldtype": "Small Text",
+   "label": "Error Message",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-18 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "FCRM",
+ "name": "CRM Phone Number Request",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Manager",
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

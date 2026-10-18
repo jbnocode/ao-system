@@ -10,6 +10,8 @@ DEMO_TASKS_KEY = "crm_demo_tasks"
 DEMO_CALL_LOGS_KEY = "crm_demo_call_logs"
 DEMO_ACTIVITIES_KEY = "crm_demo_activities"
 DEMO_DEALS_KEY = "crm_demo_deals"
+DEMO_SMS_KEY = "crm_demo_sms_messages"
+DEMO_INSURANCE_KEY = "crm_demo_insurance"
 
 
 def create_demo_data(_args: dict | None = None):
@@ -21,6 +23,7 @@ def create_demo_data(_args: dict | None = None):
 	from crm.demo.deals import create_demo_deals
 	from crm.demo.leads import create_demo_leads
 	from crm.demo.notes import create_demo_notes
+	from crm.demo.sms_messages import create_demo_sms_messages
 	from crm.demo.tasks import create_demo_tasks
 	from crm.demo.users import create_demo_users
 
@@ -29,6 +32,7 @@ def create_demo_data(_args: dict | None = None):
 	note_names = create_demo_notes(lead_names, demo_users)
 	task_names = create_demo_tasks(lead_names, demo_users)
 	call_log_names = create_demo_call_logs(lead_names, demo_users)
+	sms_payload = create_demo_sms_messages(lead_names, demo_users)
 	activity_data = create_demo_activities(lead_names, demo_users)
 
 	from crm.demo.leads import rebackdate_demo_leads
@@ -36,12 +40,17 @@ def create_demo_data(_args: dict | None = None):
 	rebackdate_demo_leads(lead_names, demo_users)
 
 	deal_data = create_demo_deals(lead_names, demo_users)
+	from crm.demo.insurance import create_demo_insurance
+
+	insurance_data = create_demo_insurance(deal_data)
 	frappe.db.set_default(DEMO_LEADS_KEY, json.dumps(lead_names))
 	frappe.db.set_default(DEMO_NOTES_KEY, json.dumps(note_names))
 	frappe.db.set_default(DEMO_TASKS_KEY, json.dumps(task_names))
 	frappe.db.set_default(DEMO_CALL_LOGS_KEY, json.dumps(call_log_names))
+	frappe.db.set_default(DEMO_SMS_KEY, json.dumps(sms_payload))
 	frappe.db.set_default(DEMO_ACTIVITIES_KEY, json.dumps(activity_data))
 	frappe.db.set_default(DEMO_DEALS_KEY, json.dumps(deal_data))
+	frappe.db.set_default(DEMO_INSURANCE_KEY, json.dumps(insurance_data))
 	frappe.db.set_default(DEMO_STATE_KEY, "1")
 
 	capture("demo_data_created", "crm")
@@ -57,8 +66,10 @@ def clear_demo_data():
 	from crm.demo.activities import delete_demo_activities
 	from crm.demo.call_logs import delete_demo_call_logs
 	from crm.demo.deals import delete_demo_deals
+	from crm.demo.insurance import delete_demo_insurance
 	from crm.demo.leads import delete_demo_leads
 	from crm.demo.notes import delete_demo_notes
+	from crm.demo.sms_messages import delete_demo_sms_messages
 	from crm.demo.tasks import delete_demo_tasks
 	from crm.demo.users import DEMO_USER_EMAILS, delete_demo_users
 
@@ -66,24 +77,41 @@ def clear_demo_data():
 	note_names = json.loads(frappe.db.get_default(DEMO_NOTES_KEY) or "[]")
 	task_names = json.loads(frappe.db.get_default(DEMO_TASKS_KEY) or "[]")
 	call_log_names = json.loads(frappe.db.get_default(DEMO_CALL_LOGS_KEY) or "[]")
+	sms_payload = json.loads(frappe.db.get_default(DEMO_SMS_KEY) or "[]")
 	activity_data = json.loads(frappe.db.get_default(DEMO_ACTIVITIES_KEY) or "{}")
 	deal_data = json.loads(frappe.db.get_default(DEMO_DEALS_KEY) or "{}")
+	insurance_data = json.loads(frappe.db.get_default(DEMO_INSURANCE_KEY) or "{}")
+	delete_demo_insurance(insurance_data)
 	delete_demo_deals(deal_data, lead_names)
 	delete_demo_activities(activity_data)
 	delete_demo_notes(note_names)
 	delete_demo_tasks(task_names)
 	delete_demo_call_logs(call_log_names)
+	delete_demo_sms_messages(sms_payload)
 	delete_demo_leads(lead_names)
 	delete_demo_users(DEMO_USER_EMAILS)
 	frappe.db.set_default(DEMO_LEADS_KEY, None)
 	frappe.db.set_default(DEMO_NOTES_KEY, None)
 	frappe.db.set_default(DEMO_TASKS_KEY, None)
 	frappe.db.set_default(DEMO_CALL_LOGS_KEY, None)
+	frappe.db.set_default(DEMO_SMS_KEY, None)
 	frappe.db.set_default(DEMO_ACTIVITIES_KEY, None)
 	frappe.db.set_default(DEMO_DEALS_KEY, None)
+	frappe.db.set_default(DEMO_INSURANCE_KEY, None)
 	frappe.db.set_default(DEMO_STATE_KEY, None)
 
 	capture("demo_data_cleared", "crm")
+
+
+@frappe.whitelist()
+def ensure_demo_insurance():
+	"""Seed quotes/policies onto existing demo deals (safe if already seeded)."""
+	frappe.only_for(["Sales Manager", "System Manager"], True)
+	from crm.demo.insurance import create_demo_insurance
+
+	deal_data = json.loads(frappe.db.get_default(DEMO_DEALS_KEY) or "{}")
+	payload = create_demo_insurance(deal_data if deal_data.get("deals") else None)
+	return payload
 
 
 @frappe.whitelist()

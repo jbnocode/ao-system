@@ -42,21 +42,36 @@ class TestFormAPI(FrappeTestCase):
 	# ---- create / read config + seeding ----
 
 	def test_new_lead_form_seeds_default_layout(self):
-		"""A brand-new Lead form is seeded with a contact-capture layout and a
-		hidden Status field with a default."""
+		"""A brand-new Lead form is seeded with contact + org + other-details
+		layout and a hidden Status field with a default."""
 		name = make_form("seed-lead")
 		cfg = F.get_form_config(name)
 
 		visible = [
 			f["fieldname"] for f in cfg["fields"] if f["fieldtype"] not in ("Section Break", "Column Break")
 		]
-		self.assertEqual(visible, ["first_name", "email", "last_name", "phone"])
+		self.assertEqual(
+			visible,
+			[
+				"first_name",
+				"email",
+				"last_name",
+				"phone",
+				"organization",
+				"job_title",
+				"website",
+				"company_description",
+			],
+		)
 		# section + column break markers are present
 		self.assertIn("Section Break", [f["fieldtype"] for f in cfg["fields"]])
 		self.assertIn("Column Break", [f["fieldtype"] for f in cfg["fields"]])
-		# first_name is mandatory on Lead
+		# first_name is mandatory on Lead; org/other fields stay optional
 		first = next(f for f in cfg["fields"] if f["fieldname"] == "first_name")
 		self.assertTrue(first["reqd"])
+		other = next(f for f in cfg["fields"] if f["fieldname"] == "company_description")
+		self.assertFalse(other["reqd"])
+		self.assertEqual(other["label"], "Other details")
 		# hidden Status seeded with a non-empty default
 		hidden = {h["fieldname"]: h for h in cfg["hidden_fields"]}
 		self.assertIn("status", hidden)
@@ -71,6 +86,47 @@ class TestFormAPI(FrappeTestCase):
 		self.assertIn("organization_name", visible)
 		hidden = {h["fieldname"] for h in cfg["hidden_fields"]}
 		self.assertIn("status", hidden)
+
+	def test_list_form_templates_includes_insurance(self):
+		templates = F.list_form_templates()
+		ids = {t["id"] for t in templates}
+		self.assertIn("contact_lead", ids)
+		self.assertIn("life_inquiry", ids)
+		self.assertIn("life_case_intake", ids)
+		life = next(t for t in templates if t["id"] == "life_inquiry")
+		self.assertEqual(life["document_type"], "CRM Lead")
+		self.assertEqual(life["category"], "insurance")
+
+	def test_life_inquiry_template_seeds_coverage_copy(self):
+		name = make_form("life-inq", template="life_inquiry")
+		cfg = F.get_form_config(name)
+		self.assertEqual(cfg["document_type"], "CRM Lead")
+		visible = {
+			f["fieldname"]: f
+			for f in cfg["fields"]
+			if f["fieldtype"] not in ("Section Break", "Column Break")
+		}
+		self.assertIn("first_name", visible)
+		self.assertIn("company_description", visible)
+		self.assertEqual(
+			visible["company_description"]["label"],
+			"What coverage are you looking for?",
+		)
+
+	def test_life_case_intake_template_maps_to_deal(self):
+		name = make_form("life-case", template="life_case_intake", document_type="CRM Lead")
+		cfg = F.get_form_config(name)
+		# template overrides a mismatched client document_type
+		self.assertEqual(cfg["document_type"], "CRM Deal")
+		visible = [
+			f["fieldname"] for f in cfg["fields"] if f["fieldtype"] not in ("Section Break", "Column Break")
+		]
+		self.assertIn("first_name", visible)
+		self.assertIn("organization_name", visible)
+		# life custom fields appear only when installed — never fail if absent
+		for optional in ("date_of_birth", "tobacco_use", "insured_state", "case_title"):
+			if optional in {f["fieldname"] for f in F.get_form_fields("CRM Deal")}:
+				self.assertIn(optional, visible)
 
 	def test_save_form_persists_edits(self):
 		name = make_form("edit-me")

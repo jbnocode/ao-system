@@ -10,6 +10,7 @@
   "restore_demo_data",
   "enable_forecasting",
   "enable_sales_hierarchy",
+  "life_agency_mode",
   "auto_update_expected_deal_value",
   "update_timestamp_on_new_communication",
   "auto_mark_replied_on_response",
@@ -87,6 +88,13 @@
    "fieldname": "enable_sales_hierarchy",
    "fieldtype": "Check",
    "label": "Enable Sales Hierarchy Permissions"
+  },
+  {
+   "default": "0",
+   "description": "Person-first Cases: Deals labeled Cases, Household contacts, hide B2B organization chrome",
+   "fieldname": "life_agency_mode",
+   "fieldtype": "Check",
+   "label": "Life Agency Mode"
   },
   {
    "fieldname": "currency",

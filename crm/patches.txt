@@ -3,6 +3,7 @@
 # Read docs to understand patches: https://frappeframework.com/docs/v14/user/en/database-migrations
 crm.patches.v1_0.move_crm_note_data_to_fcrm_note
 crm.patches.v1_0.rename_twilio_settings_to_crm_twilio_settings
+crm.patches.v1_0.migrate_crm_campaign_to_erpnext_shape_pre
 
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
@@ -35,3 +36,11 @@ crm.patches.v1_0.add_enrichment_fields_to_layouts
 crm.patches.v1_0.clamp_enrichment_max_pages
 crm.patches.v1_0.set_enrichment_rule_names
 crm.patches.v1_0.drop_enrichment_headers_scope
+crm.patches.v1_0.install_life_insurance_pack
+crm.patches.v1_0.ensure_crm_credit_wallet
+crm.patches.v1_0.remove_apps_dropdown_item
+crm.patches.v1_0.ensure_vapi_call_log_fields
+crm.patches.v1_0.ensure_phone_number_request
+crm.patches.v1_0.ensure_crm_campaign_lead_field
+crm.patches.v1_0.migrate_crm_campaign_to_erpnext_shape_post
+crm.patches.v1_0.fix_desktop_home_page_after_setup

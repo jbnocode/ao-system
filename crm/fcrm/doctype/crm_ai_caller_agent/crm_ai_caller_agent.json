@@ -1,0 +1,162 @@
+{
+ "actions": [],
+ "autoname": "field:user",
+ "creation": "2026-10-18 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "user",
+  "user_name",
+  "column_break_phone",
+  "phone_number",
+  "section_vapi",
+  "vapi_phone_id",
+  "column_break_asst",
+  "vapi_assistant_id",
+  "section_setup",
+  "voice_id",
+  "script_id",
+  "column_break_flags",
+  "custom_script",
+  "respect_dnc",
+  "reviewed_compliance",
+  "setup_completed"
+ ],
+ "fields": [
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "User",
+   "options": "User",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fetch_from": "user.full_name",
+   "fieldname": "user_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "User Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_phone",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "phone_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Phone Number",
+   "options": "Phone"
+  },
+  {
+   "fieldname": "section_vapi",
+   "fieldtype": "Section Break",
+   "label": "Vapi"
+  },
+  {
+   "fieldname": "vapi_phone_id",
+   "fieldtype": "Data",
+   "label": "Vapi Phone ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_asst",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "vapi_assistant_id",
+   "fieldtype": "Data",
+   "label": "Vapi Assistant ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_setup",
+   "fieldtype": "Section Break",
+   "label": "Agent Setup"
+  },
+  {
+   "fieldname": "voice_id",
+   "fieldtype": "Data",
+   "label": "Voice ID"
+  },
+  {
+   "fieldname": "script_id",
+   "fieldtype": "Data",
+   "label": "Script ID"
+  },
+  {
+   "fieldname": "column_break_flags",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "custom_script",
+   "fieldtype": "Check",
+   "label": "Custom Script"
+  },
+  {
+   "default": "1",
+   "fieldname": "respect_dnc",
+   "fieldtype": "Check",
+   "label": "Respect DNC"
+  },
+  {
+   "default": "0",
+   "fieldname": "reviewed_compliance",
+   "fieldtype": "Check",
+   "label": "Reviewed Compliance"
+  },
+  {
+   "default": "0",
+   "fieldname": "setup_completed",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Setup Completed"
+  }
+ ],
+ "links": [],
+ "modified": "2026-10-18 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "FCRM",
+ "name": "CRM AI Caller Agent",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales User"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

@@ -27,3 +27,7 @@ AGENTS.md
 .claude
 .pi
 .patch
+
+# Local secrets — never commit
+.creds
+.vapi-secrets.local

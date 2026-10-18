@@ -23,7 +23,7 @@
     <Resizer
       v-if="contact.doc"
       :parent="$refs.parentRef"
-      class="flex h-full flex-col overflow-hidden border-r"
+      class="flex h-full flex-col overflow-hidden"
     >
       <div class="border-b">
         <FileUploader

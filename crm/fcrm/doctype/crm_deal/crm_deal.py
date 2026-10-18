@@ -90,6 +90,7 @@ class CRMDeal(Document):
 		self.validate_status()
 		self.set_primary_contact()
 		self.set_primary_email_mobile_no()
+		self.sync_case_person_fields()
 		if not self.is_new() and self.has_value_changed("deal_owner") and self.deal_owner:
 			self.share_with_agent(self.deal_owner)
 			self.assign_agent(self.deal_owner)
@@ -160,6 +161,27 @@ class CRMDeal(Document):
 			self.email = ""
 			self.mobile_no = ""
 			self.phone = ""
+
+	def sync_case_person_fields(self):
+		"""Keep primary_insured / case_title aligned with the primary household contact."""
+		if not self.meta.has_field("primary_insured"):
+			return
+
+		primary = next((d for d in (self.contacts or []) if d.is_primary), None)
+		if primary and primary.contact:
+			self.primary_insured = primary.contact
+			if primary.full_name:
+				# Refresh title from insured unless the agent customized it away from the old name
+				prev = self.get_doc_before_save()
+				old_insured_name = None
+				if prev and prev.get("primary_insured"):
+					old_insured_name = frappe.db.get_value("Contact", prev.primary_insured, "full_name")
+				if not self.case_title or self.case_title == old_insured_name:
+					self.case_title = primary.full_name
+			elif not self.case_title:
+				self.case_title = frappe.db.get_value("Contact", primary.contact, "full_name") or ""
+		elif self.primary_insured and not self.case_title:
+			self.case_title = frappe.db.get_value("Contact", self.primary_insured, "full_name") or ""
 
 	def assign_agent(self, agent):
 		if not agent:
@@ -299,7 +321,18 @@ class CRMDeal(Document):
 			self.db_set("exchange_rate", exchange_rate)
 
 	@staticmethod
+	def life_agency_mode_enabled() -> bool:
+		"""Safe read — field may be missing until migrate / life pack install."""
+		meta = frappe.get_meta("FCRM Settings")
+		if not meta.has_field("life_agency_mode"):
+			return False
+		return bool(frappe.db.get_single_value("FCRM Settings", "life_agency_mode"))
+
+	@staticmethod
 	def default_list_data():
+		if CRMDeal.life_agency_mode_enabled():
+			return CRMDeal.life_case_list_data()
+
 		columns = [
 			{
 				"label": "Organization",
@@ -366,7 +399,76 @@ class CRMDeal(Document):
 		return {"columns": columns, "rows": rows}
 
 	@staticmethod
+	def life_case_list_data():
+		columns = [
+			{
+				"label": "Case",
+				"type": "Data",
+				"key": "case_title",
+				"width": "12rem",
+			},
+			{
+				"label": "Primary Insured",
+				"type": "Link",
+				"key": "primary_insured",
+				"options": "Contact",
+				"width": "11rem",
+			},
+			{
+				"label": "Status",
+				"type": "Link",
+				"options": "CRM Deal Status",
+				"key": "status",
+				"width": "10rem",
+			},
+			{
+				"label": "Email",
+				"type": "Data",
+				"key": "email",
+				"width": "12rem",
+			},
+			{
+				"label": "Mobile No.",
+				"type": "Data",
+				"key": "mobile_no",
+				"width": "11rem",
+			},
+			{
+				"label": "Assigned To",
+				"type": "Text",
+				"key": "_assign",
+				"width": "10rem",
+			},
+			{
+				"label": "Last Modified",
+				"type": "Datetime",
+				"key": "modified",
+				"width": "8rem",
+			},
+		]
+		rows = [
+			"name",
+			"case_title",
+			"primary_insured",
+			"status",
+			"email",
+			"mobile_no",
+			"deal_owner",
+			"sla_status",
+			"response_by",
+			"modified",
+			"_assign",
+		]
+		return {"columns": columns, "rows": rows}
+
+	@staticmethod
 	def default_kanban_settings():
+		if CRMDeal.life_agency_mode_enabled():
+			return {
+				"column_field": "status",
+				"title_field": "case_title",
+				"kanban_fields": '["email", "mobile_no", "_assign", "modified"]',
+			}
 		return {
 			"column_field": "status",
 			"title_field": "organization",

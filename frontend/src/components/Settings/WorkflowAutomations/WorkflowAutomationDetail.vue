@@ -1,7 +1,7 @@
 <template>
   <SettingsLayoutBase>
     <template #title>
-      <div class="flex items-start gap-2">
+      <div class="flex min-w-0 items-start gap-2">
         <Button
           class="-ml-2 shrink-0"
           variant="ghost"
@@ -11,17 +11,22 @@
         />
         <div class="flex min-w-0 flex-col gap-1">
           <!-- min-h-7 matches the back button, so top-aligning centres them on each other. -->
-          <div class="flex min-h-7 items-center gap-2">
-            <h2 class="truncate text-2xl-semibold">
+          <div class="flex min-h-7 min-w-0 items-center gap-2">
+            <h2
+              class="min-w-0 truncate text-2xl-semibold"
+              :title="doc.title || __('Automation')"
+            >
               {{ doc.title || __('Automation') }}
             </h2>
             <Badge
+              class="shrink-0"
               :label="doc.enabled ? __('Enabled') : __('Draft')"
               :theme="doc.enabled ? 'green' : 'amber'"
               variant="subtle"
             />
             <Badge
               v-if="doc.disabled_reason"
+              class="shrink-0"
               :label="doc.disabled_reason"
               theme="red"
               variant="subtle"

@@ -42,6 +42,11 @@
   >
     <AssignTo v-model="assignees.data" doctype="CRM Deal" :docname="dealId" />
     <div class="flex items-center gap-2">
+      <Button
+        :tooltip="__('Deal assistant')"
+        icon="lucide-sparkles"
+        @click="showAssistant = true"
+      />
       <CustomActions
         v-if="document._actions?.length"
         :actions="document._actions"
@@ -53,12 +58,19 @@
     </div>
   </div>
   <div v-if="doc.name" class="flex h-full overflow-hidden">
-    <Tabs
-      v-model="activeTab"
-      as="div"
-      :tabs="tabs"
-      class="flex flex-1 overflow-auto flex-col [&_[role='tab']]:px-1 [&_[role='tab']]:shrink-0 [&_[role='tablist']]:px-3 [&_[role='tablist']]:min-h-[45px] [&_[role='tablist']]:gap-[22px] [&>[role='tabpanel']:not([hidden])]:flex [&>[role='tabpanel']:not([hidden])]:grow [&>[data-slot=tab-list]]:overflow-x-auto [&_[data-slot=tab-indicator]]:translate-y-0 [&>[data-slot=tab-panel]]:min-h-0 [&>[data-slot=tab-panel]]:flex-col [&>[data-slot=tab-panel]]:overflow-auto"
-    >
+    <div class="flex flex-1 flex-col overflow-hidden">
+      <LifeJourneyStrip
+        :deal="dealId"
+        :reload-key="journeyReloadKey"
+        @open-tab="onJourneyOpenTab"
+        @updated="onJourneyUpdated"
+      />
+      <Tabs
+        v-model="activeTab"
+        as="div"
+        :tabs="tabs"
+        class="flex flex-1 overflow-auto flex-col [&_[role='tab']]:px-1 [&_[role='tab']]:shrink-0 [&_[role='tablist']]:px-3 [&_[role='tablist']]:min-h-[45px] [&_[role='tablist']]:gap-[22px] [&>[role='tabpanel']:not([hidden])]:flex [&>[role='tabpanel']:not([hidden])]:grow [&>[data-slot=tab-list]]:overflow-x-auto [&_[data-slot=tab-indicator]]:translate-y-0 [&>[data-slot=tab-panel]]:min-h-0 [&>[data-slot=tab-panel]]:flex-col [&>[data-slot=tab-panel]]:overflow-auto"
+      >
       <template #tab-panel="{ tab }">
         <div v-if="tab.name == 'Details'">
           <SLASection
@@ -206,7 +218,11 @@
                     v-else
                     class="flex h-20 items-center justify-center text-base text-ink-gray-5"
                   >
-                    {{ __('No Contacts Added') }}
+                    {{
+                      lifeAgencyMode
+                        ? __('No household members yet')
+                        : __('No Contacts Added')
+                    }}
                   </div>
                 </div>
               </template>
@@ -222,9 +238,11 @@
           :tabs="tabs"
           @beforeSave="beforeStatusChange"
           @afterSave="reloadAssignees"
+          @journey-updated="onJourneyUpdated"
         />
       </template>
     </Tabs>
+    </div>
   </div>
   <ErrorPage
     v-else-if="errorTitle"
@@ -263,9 +281,16 @@
     doctype="CRM Deal"
     :document="document"
   />
+  <DealAssistant
+    v-model="showAssistant"
+    :deal="dealId"
+    @done="onAssistantDone"
+  />
 </template>
 <script setup>
 import DeleteLinkedDocModal from '@/components/DeleteLinkedDocModal.vue'
+import DealAssistant from '@/components/Deal/DealAssistant.vue'
+import LifeJourneyStrip from '@/components/Deal/LifeJourneyStrip.vue'
 import ErrorPage from '@/components/ErrorPage.vue'
 import Icon from '@/components/Icon.vue'
 import DetailsIcon from '@/components/Icons/DetailsIcon.vue'
@@ -306,6 +331,7 @@ import { whatsappEnabled } from '@/composables/whatsapp'
 import { callEnabled } from '@/composables/telephony'
 import { canViewQuotations } from '@/composables/erpnext'
 import { useActiveTabManager } from '@/composables/useActiveTabManager'
+import { useLifeAgencyMode } from '@/composables/lifeAgency'
 import { useVisitedRecords } from '@/composables/useVisitedRecords'
 import {
   createResource,
@@ -322,8 +348,9 @@ import { useRoute, useRouter } from 'vue-router'
 
 const { brand } = getSettings()
 const { $dialog, $socket } = globalStore()
-const { statusOptions, getDealStatus } = statusesStore()
+const { statusOptions, getDealStatus, dealStatuses } = statusesStore()
 const { doctypeMeta } = getMeta('CRM Deal')
+const { lifeAgencyMode, dealsLabel } = useLifeAgencyMode()
 
 const route = useRoute()
 const router = useRouter()
@@ -335,6 +362,26 @@ const props = defineProps({
 const errorTitle = ref('')
 const errorMessage = ref('')
 const showDeleteLinkedDocModal = ref(false)
+const showAssistant = ref(false)
+const journeyReloadKey = ref(0)
+
+function onJourneyUpdated() {
+  journeyReloadKey.value += 1
+  document.reload?.()
+  dealStatuses?.reload?.()
+}
+
+function onJourneyOpenTab(tabName) {
+  const tab = tabs.value.find(
+    (t) => t.name === tabName || t.label === tabName,
+  )
+  if (tab) changeTabTo(tab.value)
+}
+
+function onAssistantDone(payload) {
+  onJourneyUpdated()
+  if (payload?.openTab) onJourneyOpenTab(payload.openTab)
+}
 
 const {
   triggerOnChange,
@@ -393,7 +440,7 @@ const showOrganizationModal = ref(false)
 const _organization = ref({})
 
 const breadcrumbs = computed(() => {
-  let items = [{ label: __('Deals'), route: { name: 'Deals' } }]
+  let items = [{ label: dealsLabel.value, route: { name: 'Deals' } }]
 
   if (route.query.view || route.query.viewType) {
     let view = getView(route.query.view, route.query.viewType, 'CRM Deal')
@@ -422,6 +469,13 @@ const breadcrumbs = computed(() => {
 })
 
 const title = computed(() => {
+  if (lifeAgencyMode.value) {
+    return (
+      doc.value?.case_title ||
+      doc.value?.organization ||
+      props.dealId
+    )
+  }
   let t = doctypeMeta.value?.title_field || 'name'
   return doc.value?.[t] || props.dealId
 })
@@ -526,7 +580,7 @@ const tabs = computed(() => {
   ]
   return tabOptions.filter((tab) => (tab.condition ? tab.condition() : true))
 })
-const { activeTab } = useActiveTabManager(tabs, 'lastDealTab')
+const { activeTab, changeTabTo } = useActiveTabManager(tabs, 'lastDealTab')
 
 const sections = createResource({
   url: 'crm.fcrm.doctype.crm_fields_layout.crm_fields_layout.get_sidepanel_sections',
@@ -536,11 +590,34 @@ const sections = createResource({
   transform: (data) => getParsedFields(data),
 })
 
+const B2B_SIDE_FIELDS = new Set([
+  'industry',
+  'no_of_employees',
+  'annual_revenue',
+  'linkedin',
+  'twitter',
+  'facebook',
+  'website',
+  'company_description',
+])
+
 function getParsedFields(sections) {
   sections.forEach((section) => {
-    if (section.name == 'contacts_section') return
+    if (section.name == 'contacts_section') {
+      section.label = __('Household')
+      return
+    }
+    if (!section.columns?.[0]?.fields) return
+    if (lifeAgencyMode.value) {
+      section.columns[0].fields = section.columns[0].fields.filter(
+        (field) => !B2B_SIDE_FIELDS.has(field.fieldname || field.name),
+      )
+      if (section.name === 'organization_section') {
+        section.label = __('Case Details')
+      }
+    }
     section.columns[0].fields.forEach((field) => {
-      if (field.name == 'organization') {
+      if (field.name == 'organization' || field.fieldname == 'organization') {
         field.create = (value, close) => {
           _organization.value.organization_name = value
           showOrganizationModal.value = true

@@ -74,14 +74,30 @@ DENIED_FIELDNAMES = (
 
 LAYOUT_BREAKS = ("Section Break", "Column Break")
 
-# Starting layout of a brand-new form, per target doctype: labelled sections,
-# each a list of columns, each column a list of fieldnames. A sensible
-# contact-capture starting point the author can then edit.
+# Default layouts when no template is chosen (keyed by target doctype).
+# Column entries are fieldnames, or dicts with fieldname + optional label /
+# field_description / reqd overrides for friendlier public copy.
 SEED_LAYOUT = {
 	"CRM Lead": [
 		{
 			"label": "Personal Details",
 			"columns": [["first_name", "email"], ["last_name", "phone"]],
+		},
+		{
+			"label": "Organization Details",
+			"columns": [["organization", "job_title"], ["website"]],
+		},
+		{
+			"label": "Other Details",
+			"columns": [
+				[
+					{
+						"fieldname": "company_description",
+						"label": "Other details",
+						"field_description": "Anything else you'd like us to know.",
+					}
+				]
+			],
 		},
 	],
 	"CRM Deal": [
@@ -96,13 +112,165 @@ SEED_LAYOUT = {
 	],
 }
 
+# Curated starting points for the New Form dialog. Insurance templates use
+# standard Lead/Deal fields plus life-pack custom fields when present
+# (date_of_birth, tobacco_use, insured_state, case_title); missing fields are
+# skipped so templates still work before the life pack is installed.
+FORM_TEMPLATES = {
+	"contact_lead": {
+		"title": "Contact (Lead)",
+		"description": "Name, email, phone, organization, and a free-text note.",
+		"category": "general",
+		"document_type": "CRM Lead",
+		"default_title": "Contact us",
+		"default_route": "contact",
+		"layout": SEED_LAYOUT["CRM Lead"],
+	},
+	"contact_deal": {
+		"title": "Contact (Deal / Case)",
+		"description": "Person details plus organization — creates a Deal or Case.",
+		"category": "general",
+		"document_type": "CRM Deal",
+		"default_title": "Get started",
+		"default_route": "get-started",
+		"layout": SEED_LAYOUT["CRM Deal"],
+	},
+	"life_inquiry": {
+		"title": "Life insurance inquiry",
+		"description": "Lead capture for people interested in life coverage.",
+		"category": "insurance",
+		"document_type": "CRM Lead",
+		"default_title": "Life insurance inquiry",
+		"default_route": "life-insurance-inquiry",
+		"layout": [
+			{
+				"label": "Your details",
+				"columns": [["first_name", "email"], ["last_name", "phone"]],
+			},
+			{
+				"label": "About you",
+				"columns": [["organization", "job_title"]],
+			},
+			{
+				"label": "Coverage interest",
+				"columns": [
+					[
+						{
+							"fieldname": "company_description",
+							"label": "What coverage are you looking for?",
+							"field_description": "Term, whole life, family protection, amount, or anything else we should know.",
+						}
+					]
+				],
+			},
+		],
+	},
+	"life_quote_request": {
+		"title": "Request a life quote",
+		"description": "Short lead form to request a personalized life insurance quote.",
+		"category": "insurance",
+		"document_type": "CRM Lead",
+		"default_title": "Request a quote",
+		"default_route": "life-quote",
+		"layout": [
+			{
+				"label": "Contact",
+				"columns": [["first_name", "last_name"], ["email", "phone"]],
+			},
+			{
+				"label": "Quote details",
+				"columns": [
+					["organization", "website"],
+					[
+						{
+							"fieldname": "company_description",
+							"label": "Coverage needs",
+							"field_description": "Who needs coverage, roughly how much, and preferred timeline.",
+						}
+					],
+				],
+			},
+		],
+	},
+	"life_case_intake": {
+		"title": "Life case intake",
+		"description": "Creates a Case/Deal with insured profile fields for quoting.",
+		"category": "insurance",
+		"document_type": "CRM Deal",
+		"default_title": "Life insurance application interest",
+		"default_route": "life-case-intake",
+		"layout": [
+			{
+				"label": "Primary contact",
+				"columns": [["first_name", "email"], ["last_name", "phone"]],
+			},
+			{
+				"label": "Insured profile",
+				"columns": [["date_of_birth", "tobacco_use"], ["insured_state"]],
+			},
+			{
+				"label": "Case",
+				"columns": [
+					["case_title", "organization_name"],
+					[
+						{
+							"fieldname": "company_description",
+							"label": "Notes",
+							"field_description": "Goals, dependents, or questions for your agent.",
+						}
+					],
+				],
+			},
+		],
+	},
+	"life_callback": {
+		"title": "Request a callback",
+		"description": "Minimal lead form — name, phone, and preferred callback note.",
+		"category": "insurance",
+		"document_type": "CRM Lead",
+		"default_title": "Request a callback",
+		"default_route": "life-callback",
+		"layout": [
+			{
+				"label": "Contact",
+				"columns": [["first_name", "phone"], ["last_name", "email"]],
+			},
+			{
+				"label": "Callback",
+				"columns": [
+					[
+						{
+							"fieldname": "company_description",
+							"label": "Best time to call / notes",
+							"field_description": "Share a good time to reach you or anything we should know.",
+						}
+					]
+				],
+			},
+		],
+	},
+}
+
+
+def _field_entry_name(entry) -> str | None:
+	if isinstance(entry, dict):
+		return entry.get("fieldname")
+	return entry
+
+
+def _layout_fieldnames(layout: list[dict]) -> set:
+	names = set()
+	for section in layout or []:
+		for col in section.get("columns") or []:
+			for entry in col:
+				fn = _field_entry_name(entry)
+				if fn:
+					names.add(fn)
+	return names
+
 
 def _seeded_visible_fieldnames(document_type: str) -> set:
-	names = set()
-	for section in SEED_LAYOUT.get(document_type, []):
-		for col in section["columns"]:
-			names.update(col)
-	return names
+	return _layout_fieldnames(SEED_LAYOUT.get(document_type, []))
 
 
 def guest_can_select(doctype: str) -> bool:
@@ -162,10 +330,12 @@ def _default_status(document_type: str) -> str | None:
 	return rows[0] if rows else None
 
 
-def _seed_visible_fields(document_type: str) -> list[dict]:
-	"""Web-form rows for a new form's visible layout: the curated contact set,
-	arranged into labelled sections and columns (with Section/Column breaks)."""
+def _seed_visible_fields(document_type: str, layout: list[dict] | None = None) -> list[dict]:
+	"""Web-form rows for a new form's visible layout: sections/columns from
+	`layout` (or the default SEED_LAYOUT for the doctype). Unknown fieldnames
+	(e.g. life custom fields not installed yet) are skipped."""
 	catalog = {f["fieldname"]: f for f in _mappable_fields(document_type)}
+	sections = layout if layout is not None else SEED_LAYOUT.get(document_type, [])
 
 	def _break(fieldtype, i, label=""):
 		prefix = "section_break" if fieldtype == "Section Break" else "column_break"
@@ -181,37 +351,48 @@ def _seed_visible_fields(document_type: str) -> list[dict]:
 
 	rows = []
 	n = 0
-	for section in SEED_LAYOUT.get(document_type, []):
-		n += 1
-		rows.append(_break("Section Break", n, section.get("label") or ""))
-		for ci, col in enumerate(section["columns"]):
-			if ci > 0:
-				n += 1
-				rows.append(_break("Column Break", n))
-			for fn in col:
-				f = catalog.get(fn)
+	for section in sections:
+		section_rows = []
+		for ci, col in enumerate(section.get("columns") or []):
+			col_fields = []
+			for entry in col:
+				fn = _field_entry_name(entry)
+				override = entry if isinstance(entry, dict) else {}
+				f = catalog.get(fn) if fn else None
 				if not f:
 					continue
-				rows.append(
+				reqd = override["reqd"] if "reqd" in override else (1 if f["reqd"] else 0)
+				col_fields.append(
 					{
 						"fieldname": f["fieldname"],
-						"label": f["label"],
+						"label": override.get("label") or f["label"],
 						"fieldtype": f["fieldtype"],
 						"options": f["options"],
-						"reqd": 1 if f["reqd"] else 0,
-						"placeholder": "",
-						"field_description": "",
+						"reqd": 1 if reqd else 0,
+						"placeholder": override.get("placeholder") or "",
+						"field_description": override.get("field_description") or "",
 					}
 				)
+			if not col_fields:
+				continue
+			if section_rows and ci > 0:
+				n += 1
+				section_rows.append(_break("Column Break", n))
+			section_rows.extend(col_fields)
+		if not section_rows:
+			continue
+		n += 1
+		rows.append(_break("Section Break", n, section.get("label") or ""))
+		rows.extend(section_rows)
 	return rows
 
 
-def _seed_hidden_fields(document_type: str) -> list[dict]:
+def _seed_hidden_fields(document_type: str, visible_names: set | None = None) -> list[dict]:
 	"""Mandatory fields a public visitor should not fill (e.g. Status, a Link the
 	system sets). Seeded into the hidden section with a sensible default so the
 	author sees them and can override the value applied on submission."""
 	meta = frappe.get_meta(document_type)
-	visible = _seeded_visible_fieldnames(document_type)
+	visible = visible_names if visible_names is not None else _seeded_visible_fieldnames(document_type)
 	hidden = []
 	for df in meta.fields:
 		if not df.reqd or df.fieldname in visible:
@@ -229,6 +410,26 @@ def _seed_hidden_fields(document_type: str) -> list[dict]:
 			}
 		)
 	return hidden
+
+
+@frappe.whitelist()
+def list_form_templates() -> list[dict]:
+	"""Catalog for the New Form dialog — id, labels, target doctype, defaults."""
+	_check_manager()
+	out = []
+	for tid, t in FORM_TEMPLATES.items():
+		out.append(
+			{
+				"id": tid,
+				"title": _(t["title"]),
+				"description": _(t["description"]),
+				"category": t["category"],
+				"document_type": t["document_type"],
+				"default_title": _(t["default_title"]),
+				"default_route": t["default_route"],
+			}
+		)
+	return out
 
 
 def _check_manager():
@@ -436,6 +637,14 @@ def save_form(name: str | None, form: dict | str) -> dict:
 	if isinstance(form, str):
 		form = json.loads(form or "{}")
 
+	# Resolve template before doctype checks so create can send template alone.
+	template_id = form.get("template") if not name else None
+	template = FORM_TEMPLATES.get(template_id) if template_id else None
+	if template_id and not template:
+		frappe.throw(_("Unknown form template: {0}").format(template_id))
+	if template:
+		form["document_type"] = template["document_type"]
+
 	if form.get("document_type") not in ALLOWED_DOCTYPES:
 		frappe.throw(_("Forms can only map to: {0}").format(", ".join(ALLOWED_DOCTYPES)))
 
@@ -463,10 +672,11 @@ def save_form(name: str | None, form: dict | str) -> dict:
 	doc.is_standard = 0
 	doc.module = FORM_MODULE
 
-	# brand-new form → seed a starting contact-capture layout (only on create)
+	# brand-new form → seed from template (or default layout for the doctype)
 	fields = form.get("fields")
 	if not name and not fields:
-		fields = _seed_visible_fields(form["document_type"])
+		layout = template["layout"] if template else None
+		fields = _seed_visible_fields(form["document_type"], layout)
 
 	# only rewrite the layout when fields were actually sent — an update that omits
 	# `fields` (e.g. a settings-only save) must not wipe the existing layout
@@ -498,7 +708,12 @@ def save_form(name: str | None, form: dict | str) -> dict:
 	# once on create (e.g. Status); thereafter whatever the builder sends wins.
 	hidden = form.get("hidden_fields")
 	if hidden is None and not name:
-		hidden = _seed_hidden_fields(form["document_type"])
+		visible_names = {
+			f.get("fieldname")
+			for f in (fields or [])
+			if f.get("fieldtype") not in LAYOUT_BREAKS and f.get("fieldname")
+		}
+		hidden = _seed_hidden_fields(form["document_type"], visible_names)
 	if isinstance(hidden, str):
 		hidden = json.loads(hidden or "[]")
 	hidden = _validated_hidden_fields(form["document_type"], hidden or [])

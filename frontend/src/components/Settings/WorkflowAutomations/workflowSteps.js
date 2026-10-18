@@ -5,9 +5,9 @@
  * row and every branch child ordered after its `If`.
  */
 
-// The canvas runs left to right: each step is a column, an If's arms split vertically.
-const COLUMN_WIDTH = 300
-const BRANCH_OFFSET = 108
+// The canvas runs top to bottom: each step is a row, an If's arms split horizontally.
+const ROW_HEIGHT = 160
+const BRANCH_OFFSET = 240
 
 /**
  * A wait-for-event step is stored as two rows - the wait, then an `If` reading the outcome the
@@ -224,7 +224,8 @@ function findRow(nodes, cursor) {
 /** Depth-first list of every node with its canvas position. Unlike `toRows`, it has no outcome rows. */
 export function layoutSteps(tree) {
   const placed = []
-  place(tree, COLUMN_WIDTH, 0, placed)
+  // Start one row below the trigger (fixed at 0,0 in workflowGraph).
+  place(tree, 0, ROW_HEIGHT, placed)
   return placed
 }
 
@@ -232,13 +233,13 @@ export function layoutSteps(tree) {
 function place(nodes, x, y, placed, spread = BRANCH_OFFSET) {
   nodes.forEach((node) => {
     placed.push({ node, position: { x, y } })
-    x += COLUMN_WIDTH
+    y += ROW_HEIGHT
     if (!isBranching(node)) return
-    const ifEnd = place(node.children.If, x, y - spread, placed, spread / 2)
-    const elseEnd = place(node.children.Else, x, y + spread, placed, spread / 2)
-    x = Math.max(ifEnd, elseEnd)
+    const ifEnd = place(node.children.If, x - spread, y, placed, spread / 2)
+    const elseEnd = place(node.children.Else, x + spread, y, placed, spread / 2)
+    y = Math.max(ifEnd, elseEnd)
   })
-  return x
+  return y
 }
 
 /** The array a node lives in, so callers can insert a sibling or splice it out. */

@@ -9,3 +9,9 @@ export const showSettings = ref(false)
 export const disableSettingModalOutsideClick = ref(false)
 
 export const activeSettingsPage = ref('')
+
+/** When opening Telephony settings, jump to this sub-step (e.g. phone-numbers). */
+export const telephonySettingsStep = ref('')
+
+/** Optional user filter when opening Settings → Usage from Credits. */
+export const creditUsageUserFilter = ref('')

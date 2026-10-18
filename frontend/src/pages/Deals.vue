@@ -1,7 +1,11 @@
 <template>
   <LayoutHeader>
     <template #left-header>
-      <ViewBreadcrumbs v-model="viewControls" routeName="Deals" />
+      <ViewBreadcrumbs
+        v-model="viewControls"
+        routeName="Deals"
+        :label="dealsLabel"
+      />
     </template>
     <template #right-header>
       <CustomActions
@@ -275,6 +279,7 @@ import { usersStore } from '@/stores/users'
 import { organizationsStore } from '@/stores/organizations'
 import { statusesStore } from '@/stores/statuses'
 import { callEnabled } from '@/composables/telephony'
+import { useLifeAgencyMode } from '@/composables/lifeAgency'
 import { formatDate, timeAgo, website, formatTime } from '@/utils'
 import { timestampCell } from '@/composables/useTimelinePreferences'
 import { useOnboarding } from '@framework/ui/components/Onboarding'
@@ -296,6 +301,7 @@ const { showModal } = useDoctypeModal()
 const { on } = useBroadcast()
 
 const route = useRoute()
+const { dealsLabel } = useLifeAgencyMode()
 
 const dealsListView = ref(null)
 const showDealModal = ref(false)

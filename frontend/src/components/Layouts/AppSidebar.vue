@@ -77,26 +77,31 @@
               </SidebarLabel>
             </template>
             <nav class="flex flex-col gap-1">
-              <SidebarItem
-                v-for="link in section.views"
-                :key="link.key"
-                :route="link.to"
-                :label="__(link.label)"
-                :active="activeItem === link.key"
-                @click="selectItem($event, link.key)"
-              >
-                <template #prefix>
-                  <Icon :icon="link.icon" class="size-4 text-ink-gray-7" />
-                </template>
-                <Tooltip
-                  :text="__(link.label)"
-                  side="right"
-                  :hoverDelay="1500"
-                  :disabled="isCollapsed"
+              <template v-for="link in section.views" :key="link.key">
+                <div
+                  v-if="link.dividerBefore"
+                  class="mx-1 my-1.5 border-t border-outline-gray-2"
+                  role="separator"
+                />
+                <SidebarItem
+                  :route="link.to"
+                  :label="__(link.label)"
+                  :active="activeItem === link.key"
+                  @click="selectItem($event, link.key)"
                 >
-                  <span class="truncate text-sm">{{ __(link.label) }}</span>
-                </Tooltip>
-              </SidebarItem>
+                  <template #prefix>
+                    <Icon :icon="link.icon" class="size-4 text-ink-gray-7" />
+                  </template>
+                  <Tooltip
+                    :text="__(link.label)"
+                    side="right"
+                    :hoverDelay="1500"
+                    :disabled="isCollapsed"
+                  >
+                    <span class="truncate text-sm">{{ __(link.label) }}</span>
+                  </Tooltip>
+                </SidebarItem>
+              </template>
             </nav>
           </CollapsibleSection>
         </div>
@@ -118,6 +123,7 @@
               :isSidebarCollapsed="isCollapsed"
             />
           </div>
+          <CreditBalanceBanner :isSidebarCollapsed="isCollapsed" />
           <SidebarItem
             v-if="isManager() && isDemoDataCreated"
             :label="__('Clear Demo Data')"
@@ -137,20 +143,27 @@
               <HelpIcon class="size-4 text-ink-gray-7" />
             </template>
           </SidebarItem>
-          <SidebarItem
-            :label="isCollapsed ? __('Expand') : __('Collapse')"
-            @click="isSidebarCollapsed = !isSidebarCollapsed"
-          >
-            <template #prefix>
-              <CollapseSidebar
-                class="size-4 text-ink-gray-7 duration-300 ease-in-out"
-                :class="{ '[transform:rotateY(180deg)]': isCollapsed }"
-              />
-            </template>
-          </SidebarItem>
         </div>
       </div>
     </Sidebar>
+    <Tooltip
+      v-if="!mobile"
+      :text="isCollapsed ? __('Expand') : __('Collapse')"
+      side="right"
+    >
+      <button
+        type="button"
+        class="absolute top-1/2 right-0 z-20 flex size-6 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full border border-outline-gray-2 bg-surface-gray-1 text-ink-gray-7 shadow-sm transition-colors hover:bg-surface-gray-2 hover:text-ink-gray-9"
+        :aria-label="isCollapsed ? __('Expand') : __('Collapse')"
+        @click="isSidebarCollapsed = !isSidebarCollapsed"
+      >
+        <span
+          class="size-3.5"
+          :class="isCollapsed ? 'lucide-chevron-right' : 'lucide-chevron-left'"
+          aria-hidden="true"
+        />
+      </button>
+    </Tooltip>
     <Notifications v-if="!mobile" />
   </div>
 
@@ -186,9 +199,11 @@ import CollapsibleSection from '@/components/CollapsibleSection.vue'
 import Icon from '@/components/Icon.vue'
 import PinIcon from '@/components/Icons/PinIcon.vue'
 import UserDropdown from '@/components/UserDropdown.vue'
+import CreditBalanceBanner from '@/components/Layouts/CreditBalanceBanner.vue'
 import SquareAsterisk from '@/components/Icons/SquareAsterisk.vue'
 import WebsiteIcon from '@/components/Icons/WebsiteIcon.vue'
 import { getNavigationItems } from '@/utils/navigation'
+import CalendarIcon from '@/components/Icons/CalendarIcon.vue'
 import ContactsIcon from '@/components/Icons/ContactsIcon.vue'
 import DealsIcon from '@/components/Icons/DealsIcon.vue'
 import LeadsIcon from '@/components/Icons/LeadsIcon.vue'
@@ -196,7 +211,13 @@ import NoteIcon from '@/components/Icons/NoteIcon.vue'
 import OrganizationsIcon from '@/components/Icons/OrganizationsIcon.vue'
 import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
 import TaskIcon from '@/components/Icons/TaskIcon.vue'
-import CollapseSidebar from '@/components/Icons/CollapseSidebar.vue'
+import LucideCalendarCheck from '~icons/lucide/calendar-check'
+import LucideFileText from '~icons/lucide/file-text'
+import LucideFolderOpen from '~icons/lucide/folder-open'
+import LucideMegaphone from '~icons/lucide/megaphone'
+import LucidePhoneCall from '~icons/lucide/phone-call'
+import LucideShield from '~icons/lucide/shield'
+import LucideSparkles from '~icons/lucide/sparkles'
 import NotificationsIcon from '@/components/Icons/NotificationsIcon.vue'
 import HelpIcon from '@/components/Icons/HelpIcon.vue'
 import Notifications from '@/components/Notifications.vue'
@@ -267,6 +288,7 @@ const allViews = computed(() => {
         icon: link.icon,
         key: link.route,
         to: { name: link.route },
+        dividerBefore: !!link.dividerBefore,
       })),
     },
   ]
@@ -311,14 +333,32 @@ function getIcon(routeName, icon) {
       return LeadsIcon
     case 'Deals':
       return DealsIcon
+    case 'Quoting':
+      return LucideFileText
+    case 'Policies':
+      return LucideShield
+    case 'Documents':
+      return LucideFolderOpen
     case 'Contacts':
       return ContactsIcon
     case 'Organizations':
       return OrganizationsIcon
     case 'Notes':
       return NoteIcon
+    case 'Calendar':
+      return CalendarIcon
+    case 'Booking':
+      return LucideCalendarCheck
+    case 'Campaigns':
+      return LucideMegaphone
+    case 'AI':
+      return LucideSparkles
     case 'Call Logs':
+    case 'Human Dialer':
       return PhoneIcon
+    case 'Dialer':
+    case 'AI Caller Usage':
+      return LucidePhoneCall
     default:
       return PinIcon
   }

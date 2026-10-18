@@ -40,7 +40,7 @@ function edge(source, target, label) {
     sourceHandle: 'output',
     targetHandle: 'input',
     label,
-    type: 'bezier',
+    type: 'smoothstep',
     labelBgPadding: [14, 2],
     labelBgBorderRadius: 6,
     style: { stroke: '#4E4E4E', strokeWidth: 1 },

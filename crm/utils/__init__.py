@@ -329,3 +329,30 @@ def on_communication_update(doc: Communication, method: str | None = None):
 		values,
 		update_modified=False,
 	)
+
+
+def block_desk_for_tenants():
+	"""Redirect tenant users away from Desk (/desk, /app). System Managers keep access.
+
+	Matches /desk and /desk/* (Desk SPA deep links), not only the exact /desk path.
+	"""
+	request = getattr(frappe.local, "request", None)
+	if not request:
+		return
+
+	path = (request.path or "").rstrip("/") or "/"
+	is_desk = path == "/desk" or path.startswith("/desk/")
+	is_app = path == "/app" or path.startswith("/app/")
+	if not is_desk and not is_app:
+		return
+
+	user = frappe.session.user
+	if not user or user in ("Guest", "Administrator"):
+		return
+
+	# Only platform admins may use Desk. Sales Manager / Sales User are tenants → /crm.
+	if "System Manager" in frappe.get_roles(user):
+		return
+
+	frappe.redirect("/crm")
+

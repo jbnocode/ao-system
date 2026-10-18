@@ -17,54 +17,89 @@
         :actions="document.actions"
       />
       <EnrichFromWebsite
+        v-if="!lifeAgencyMode"
         doctype="CRM Deal"
         :docname="dealId"
         :website="doc.website"
         @done="onEnriched"
       />
+      <Button
+        :tooltip="__('Deal assistant')"
+        :label="__('Assistant')"
+        iconLeft="lucide-sparkles"
+        @click="showAssistant = true"
+      />
+    </template>
+    <template v-if="!errorTitle" #below-header>
       <AssignTo v-model="assignees.data" doctype="CRM Deal" :docname="dealId" />
-      <Dropdown v-if="doc && document.statuses" :options="statuses" align="end">
-        <template #default="{ open }">
-          <Button
-            v-if="doc.status"
-            :label="statusLabel(doc.status)"
-            :iconRight="open ? 'lucide-chevron-up' : 'lucide-chevron-down'"
-          >
-            <template #prefix>
-              <IndicatorIcon :class="getDealStatus(doc.status).color" />
-            </template>
-          </Button>
-        </template>
-      </Dropdown>
+      <div v-if="doc && document.statuses" class="ml-auto">
+        <Dropdown :options="statuses" align="end">
+          <template #default="{ open }">
+            <Button
+              v-if="doc.status"
+              :label="statusLabel(doc.status)"
+              :iconRight="open ? 'lucide-chevron-up' : 'lucide-chevron-down'"
+            >
+              <template #prefix>
+                <IndicatorIcon :class="getDealStatus(doc.status).color" />
+              </template>
+            </Button>
+          </template>
+        </Dropdown>
+      </div>
     </template>
   </LayoutHeader>
   <div v-if="doc.name" class="flex h-full overflow-hidden">
-    <Tabs
-      ref="dealTabsRef"
-      v-model="activeTab"
-      as="div"
-      :tabs="tabs"
-      class="flex flex-1 overflow-hidden flex-col [&_[role='tab']]:px-1 [&_[role='tab']]:shrink-0 [&_[role='tablist']]:px-5 [&_[role='tablist']::-webkit-scrollbar]:h-0 [&_[role='tablist']]:min-h-[45px] [&_[role='tablist']]:gap-[22px] [&>[role='tabpanel']:not([hidden])]:flex [&>[role='tabpanel']:not([hidden])]:grow [&>[data-slot=tab-list]]:overflow-x-auto [&_[data-slot=tab-indicator]]:translate-y-0 [&>[data-slot=tab-panel]]:min-h-0 [&>[data-slot=tab-panel]]:flex-col [&>[data-slot=tab-panel]]:overflow-auto"
-    >
-      <template #tab-panel>
-        <Activities
-          ref="activities"
-          v-model:reload="reload"
-          v-model:activeTab="activeTab"
-          doctype="CRM Deal"
-          :docname="dealId"
-          :tabs="tabs"
-          @beforeSave="beforeStatusChange"
-          @afterSave="reloadResources"
-        />
-      </template>
-    </Tabs>
-    <Resizer side="right" class="flex flex-col justify-between border-l">
-      <div
-        class="flex h-[45px] cursor-copy items-center border-b px-5 py-2.5 text-lg-medium text-ink-gray-9"
-        @click="copyToClipboard(dealId)"
+    <div class="flex flex-1 flex-col overflow-hidden">
+      <LifeJourneyStrip
+        :deal="dealId"
+        :reload-key="journeyReloadKey"
+        @open-tab="onJourneyOpenTab"
+        @updated="onJourneyUpdated"
+      />
+      <Tabs
+        ref="dealTabsRef"
+        v-model="activeTab"
+        as="div"
+        :tabs="tabs"
+        class="flex flex-1 overflow-hidden flex-col [&_[role='tab']]:px-1 [&_[role='tab']]:shrink-0 [&_[role='tablist']]:px-5 [&_[role='tablist']::-webkit-scrollbar]:h-0 [&_[role='tablist']]:min-h-[45px] [&_[role='tablist']]:gap-[22px] [&>[role='tabpanel']:not([hidden])]:flex [&>[role='tabpanel']:not([hidden])]:grow [&>[data-slot=tab-list]]:overflow-x-auto [&_[data-slot=tab-indicator]]:translate-y-0 [&>[data-slot=tab-panel]]:min-h-0 [&>[data-slot=tab-panel]]:flex-col [&>[data-slot=tab-panel]]:overflow-auto"
       >
-        {{ __(dealId) }}
+        <template #tab-panel>
+          <Activities
+            ref="activities"
+            v-model:reload="reload"
+            v-model:activeTab="activeTab"
+            doctype="CRM Deal"
+            :docname="dealId"
+            :tabs="tabs"
+            @beforeSave="beforeStatusChange"
+            @afterSave="reloadResources"
+            @journey-updated="onJourneyUpdated"
+          />
+        </template>
+      </Tabs>
+    </div>
+    <Resizer
+      side="right"
+      class="flex flex-col justify-between"
+      collapsible
+      v-slot="{ collapse }"
+    >
+      <div
+        class="flex h-[45px] items-center gap-2 border-b px-3 py-2.5 text-lg-medium text-ink-gray-9"
+      >
+        <div
+          class="min-w-0 flex-1 cursor-copy truncate px-2"
+          @click="copyToClipboard(dealId)"
+        >
+          {{ __(dealId) }}
+        </div>
+        <Button
+          :tooltip="__('Collapse')"
+          variant="ghost"
+          icon="lucide-panel-right-close"
+          @click="collapse"
+        />
       </div>
       <div class="flex items-center justify-start gap-5 border-b p-5">
         <Tooltip :text="__('Organization Logo')">
@@ -89,6 +124,13 @@
               :tooltip="__('Make a Call')"
               :icon="PhoneIcon"
               @click="triggerCall"
+            />
+            <Button
+              v-if="aiCallReady"
+              :tooltip="__('AI Call')"
+              :icon="LucidePhoneCall"
+              :loading="aiCallBusy"
+              @click="triggerAiCall"
             />
 
             <Button
@@ -215,8 +257,19 @@
                             v-if="contact.is_primary"
                             class="ml-2"
                             variant="outline"
-                            :label="__('Primary')"
+                            :label="
+                              lifeAgencyMode
+                                ? __('Primary insured')
+                                : __('Primary')
+                            "
                             theme="green"
+                          />
+                          <Badge
+                            v-else-if="lifeAgencyMode && contact.relationship"
+                            class="ml-2"
+                            variant="outline"
+                            :label="__(contact.relationship)"
+                            theme="gray"
                           />
                         </div>
                         <div class="flex items-center">
@@ -264,6 +317,21 @@
                         {{ contact.mobile_no }}
                       </div>
                       <div
+                        v-if="lifeAgencyMode"
+                        class="flex items-center gap-3 p-1 py-1.5 text-ink-gray-8"
+                      >
+                        <FormControl
+                          type="select"
+                          class="w-full"
+                          :label="__('Relationship')"
+                          :options="relationshipOptions"
+                          :modelValue="contact.relationship || ''"
+                          @update:modelValue="
+                            (v) => setContactRelationship(contact, v)
+                          "
+                        />
+                      </div>
+                      <div
                         v-if="!contact.email && !contact.mobile_no"
                         class="flex items-center justify-center py-4 text-sm text-ink-gray-4"
                       >
@@ -281,7 +349,11 @@
                 v-else
                 class="flex h-20 items-center justify-center text-base text-ink-gray-5"
               >
-                {{ __('No Contacts Added') }}
+                {{
+                  lifeAgencyMode
+                    ? __('No household members yet')
+                    : __('No Contacts Added')
+                }}
               </div>
             </div>
           </template>
@@ -337,9 +409,16 @@
     doctype="CRM Deal"
     :document="document"
   />
+  <DealAssistant
+    v-model="showAssistant"
+    :deal="dealId"
+    @done="onAssistantDone"
+  />
 </template>
 <script setup>
 import DeleteLinkedDocModal from '@/components/DeleteLinkedDocModal.vue'
+import DealAssistant from '@/components/Deal/DealAssistant.vue'
+import LifeJourneyStrip from '@/components/Deal/LifeJourneyStrip.vue'
 import ErrorPage from '@/components/ErrorPage.vue'
 import Icon from '@/components/Icon.vue'
 import Resizer from '@/components/Resizer.vue'
@@ -350,6 +429,7 @@ import Email2Icon from '@/components/Icons/Email2Icon.vue'
 import CommentIcon from '@/components/Icons/CommentIcon.vue'
 import DetailsIcon from '@/components/Icons/DetailsIcon.vue'
 import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
+import LucidePhoneCall from '~icons/lucide/phone-call'
 import TaskIcon from '@/components/Icons/TaskIcon.vue'
 import NoteIcon from '@/components/Icons/NoteIcon.vue'
 import WhatsAppIcon from '@/components/Icons/WhatsAppIcon.vue'
@@ -387,11 +467,20 @@ import { useDocument } from '@/data/document'
 import { whatsappEnabled } from '@/composables/whatsapp'
 import { canViewQuotations } from '@/composables/erpnext'
 import { callEnabled } from '@/composables/telephony'
+import {
+  aiCallBusy,
+  aiCallReady,
+  loadAiCallReady,
+  startAiOutboundCall,
+} from '@/composables/aiOutbound'
 import { useCommandPaletteContext } from '@/composables/useCommandPalette'
 import { flattenCommandActions } from '@/utils/commandPalette'
 import { recordCommands } from '@/components/CommandPalette/recordCommands'
 import { useBroadcast } from '@/composables/useBroadcast'
 import {
+  Badge,
+  Button,
+  FormControl,
   createResource,
   Dropdown,
   Tooltip,
@@ -414,14 +503,16 @@ import {
 } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useActiveTabManager } from '@/composables/useActiveTabManager'
+import { useLifeAgencyMode } from '@/composables/lifeAgency'
 import { useUnsavedChangesWarning } from '@/composables/useUnsavedChangesWarning'
 import { useVisitedRecords } from '@/composables/useVisitedRecords'
 
 const { on } = useBroadcast()
 const { brand } = getSettings()
 const { $dialog, $socket, makeCall } = globalStore()
-const { statusOptions, getDealStatus } = statusesStore()
+const { statusOptions, getDealStatus, dealStatuses } = statusesStore()
 const { doctypeMeta } = getMeta('CRM Deal')
+const { lifeAgencyMode, dealsLabel } = useLifeAgencyMode()
 
 const { updateOnboardingStep, isOnboardingStepsCompleted } =
   useOnboarding('frappecrm')
@@ -436,6 +527,26 @@ const props = defineProps({
 const errorTitle = ref('')
 const errorMessage = ref('')
 const showDeleteLinkedDocModal = ref(false)
+const showAssistant = ref(false)
+const journeyReloadKey = ref(0)
+
+function onJourneyUpdated() {
+  journeyReloadKey.value += 1
+  document.reload?.()
+  dealStatuses?.reload?.()
+}
+
+function onJourneyOpenTab(tabName) {
+  const tab = tabs.value.find(
+    (t) => t.name === tabName || t.label === tabName,
+  )
+  if (tab) changeTabTo(tab.value)
+}
+
+function onAssistantDone(payload) {
+  onJourneyUpdated()
+  if (payload?.openTab) onJourneyOpenTab(payload.openTab)
+}
 
 const {
   triggerOnChange,
@@ -513,6 +624,7 @@ onMounted(async () => {
   })
   if (document.doc) await triggerOnRender()
   markVisited(props.dealId)
+  loadAiCallReady()
 })
 
 onBeforeUnmount(() => {
@@ -525,7 +637,7 @@ const showFilesUploader = ref(false)
 const _organization = ref({})
 
 const breadcrumbs = computed(() => {
-  let items = [{ label: __('Deals'), route: { name: 'Deals' } }]
+  let items = [{ label: dealsLabel.value, route: { name: 'Deals' } }]
 
   if (route.query.view || route.query.viewType) {
     let view = getView(route.query.view, route.query.viewType, 'CRM Deal')
@@ -554,6 +666,14 @@ const breadcrumbs = computed(() => {
 })
 
 const title = computed(() => {
+  if (lifeAgencyMode.value) {
+    return (
+      doc.value?.case_title ||
+      primaryContactName.value ||
+      doc.value?.organization ||
+      props.dealId
+    )
+  }
   let t = doctypeMeta.value?.title_field || 'name'
   return doc.value?.[t] || props.dealId
 })
@@ -701,6 +821,15 @@ function dealCommunicationCommands() {
       group: 'Deal',
       icon: 'phone',
       perform: triggerCall,
+    })
+  }
+  if (aiCallReady.value) {
+    commands.push({
+      id: 'deal-ai-call',
+      title: 'AI call',
+      group: 'Deal',
+      icon: 'phone-call',
+      perform: triggerAiCall,
     })
   }
   return commands
@@ -854,9 +983,37 @@ on('reload-deal-sections', () => sections.reload())
 
 if (!sections.data) sections.fetch()
 
+watch(lifeAgencyMode, () => sections.reload())
+
+const B2B_SIDE_FIELDS = new Set([
+  'industry',
+  'no_of_employees',
+  'annual_revenue',
+  'linkedin',
+  'twitter',
+  'facebook',
+  'website',
+  'company_description',
+])
+
 function getParsedSections(_sections) {
   _sections.forEach((section) => {
-    if (section.name == 'contacts_section') return
+    if (section.name == 'contacts_section') {
+      section.label = __('Household')
+      return
+    }
+    if (!section.columns?.[0]?.fields) return
+
+    if (lifeAgencyMode.value) {
+      // Hide classic org B2B chrome; keep optional organization link if present
+      section.columns[0].fields = section.columns[0].fields.filter(
+        (field) => !B2B_SIDE_FIELDS.has(field.fieldname || field.name),
+      )
+      if (section.name === 'organization_section') {
+        section.label = __('Case Details')
+      }
+    }
+
     section.columns[0].fields.forEach((field) => {
       if (field.fieldname == 'organization') {
         field.create = (value, close) => {
@@ -889,7 +1046,9 @@ function contactOptions(contact) {
 
   if (!contact.is_primary) {
     options.push({
-      label: __('Set as Primary Contact'),
+      label: lifeAgencyMode.value
+        ? __('Set as Primary Insured')
+        : __('Set as Primary Contact'),
       icon: h(SuccessIcon, { class: 'h-4 w-4' }),
       onClick: () => setPrimaryContact(contact.name),
     })
@@ -952,21 +1111,61 @@ const dealContacts = createResource({
 
 if (!dealContacts.data) dealContacts.fetch()
 
-function triggerCall() {
+const primaryContactName = computed(() => {
+  const list = dealContacts.data || []
+  const primary = list.find((c) => c.is_primary) || list[0]
+  return primary?.full_name || ''
+})
+
+const relationshipOptions = [
+  'Self',
+  'Spouse',
+  'Child',
+  'Parent',
+  'Other',
+].map((v) => ({ label: __(v), value: v }))
+
+async function setContactRelationship(contact, relationship) {
+  try {
+    await call('crm.life.api.set_contact_relationship', {
+      deal: props.dealId,
+      contact: contact.name,
+      relationship,
+    })
+    dealContacts.reload()
+    document.reload?.()
+  } catch (e) {
+    toast.error(e?.messages?.join?.(' ') || e?.message || __('Could not update'))
+  }
+}
+
+function primaryDealMobile() {
   let primaryContact = dealContacts.data?.find((c) => c.is_primary)
   if (!primaryContact) {
     toast.error(__('No Primary Contact Set'))
-    return
+    return null
   }
-
   let mobile_no = primaryContact.mobile_no || null
-
   if (!mobile_no) {
     toast.error(__('No Mobile Number Set'))
-    return
+    return null
   }
+  return mobile_no
+}
 
-  makeCall(mobile_no)
+function triggerCall() {
+  const mobile_no = primaryDealMobile()
+  if (mobile_no) makeCall(mobile_no)
+}
+
+function triggerAiCall() {
+  const mobile_no = primaryDealMobile()
+  if (!mobile_no) return
+  startAiOutboundCall({
+    toNumber: mobile_no,
+    referenceDoctype: 'CRM Deal',
+    referenceDocname: props.dealId,
+  })
 }
 
 async function triggerStatusChange(value) {

@@ -19,10 +19,14 @@
   <NoteViewModal v-if="showNoteView" />
   <MentionHoverCard />
   <FieldLayoutDialogContainer />
+  <AiSidebarChat />
   <CommandPalette />
+  <Settings />
 </template>
 <script setup>
+import AiSidebarChat from '@/components/AI/AiSidebarChat.vue'
 import CommandPalette from '@/components/CommandPalette/CommandPalette.vue'
+import Settings from '@/components/Settings/Settings.vue'
 import FieldLayoutDialogContainer from '@/components/Modals/FieldLayoutDialogContainer.vue'
 import ChangePasswordModal from '@/components/Modals/ChangePasswordModal.vue'
 import CreateDocumentModal from '@/components/Modals/CreateDocumentModal.vue'

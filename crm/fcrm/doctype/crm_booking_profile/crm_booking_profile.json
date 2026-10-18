@@ -1,0 +1,223 @@
+{
+ "actions": [],
+ "autoname": "field:user",
+ "creation": "2026-10-18 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "user",
+  "user_name",
+  "column_break_status",
+  "enabled",
+  "provider",
+  "section_page",
+  "page_title",
+  "slug",
+  "column_break_meeting",
+  "duration_minutes",
+  "timezone",
+  "advance_days",
+  "section_video",
+  "meeting_provider",
+  "column_break_video",
+  "zoom_personal_url",
+  "zoom_account_email",
+  "section_calendly",
+  "calendly_url",
+  "section_native",
+  "availability_json",
+  "buffer_minutes"
+ ],
+ "fields": [
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "User",
+   "options": "User",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fetch_from": "user.full_name",
+   "fieldname": "user_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "User Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Enabled"
+  },
+  {
+   "default": "Native",
+   "fieldname": "provider",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Provider",
+   "options": "Native\nCalendly",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_page",
+   "fieldtype": "Section Break",
+   "label": "Booking Page"
+  },
+  {
+   "fieldname": "page_title",
+   "fieldtype": "Data",
+   "label": "Page Title"
+  },
+  {
+   "description": "Public path: /crm/book/{slug}",
+   "fieldname": "slug",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Slug",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "column_break_meeting",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "30",
+   "fieldname": "duration_minutes",
+   "fieldtype": "Int",
+   "label": "Duration (minutes)",
+   "non_negative": 1
+  },
+  {
+   "default": "UTC",
+   "fieldname": "timezone",
+   "fieldtype": "Data",
+   "label": "Timezone"
+  },
+  {
+   "default": "14",
+   "fieldname": "advance_days",
+   "fieldtype": "Int",
+   "label": "Bookable Days Ahead",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "section_video",
+   "fieldtype": "Section Break",
+   "label": "Video Meeting"
+  },
+  {
+   "default": "None",
+   "description": "Google Meet uses your connected Google Calendar. Zoom uses your personal meeting link (or account email).",
+   "fieldname": "meeting_provider",
+   "fieldtype": "Select",
+   "label": "Meeting Provider",
+   "options": "None\nGoogle Meet\nZoom"
+  },
+  {
+   "fieldname": "column_break_video",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.meeting_provider==\"Zoom\"",
+   "description": "e.g. https://zoom.us/j/123456789",
+   "fieldname": "zoom_personal_url",
+   "fieldtype": "Data",
+   "label": "Zoom Personal Meeting URL",
+   "options": "URL"
+  },
+  {
+   "depends_on": "eval:doc.meeting_provider==\"Zoom\"",
+   "fieldname": "zoom_account_email",
+   "fieldtype": "Data",
+   "label": "Zoom Account Email",
+   "options": "Email"
+  },
+  {
+   "depends_on": "eval:doc.provider==\"Calendly\"",
+   "fieldname": "section_calendly",
+   "fieldtype": "Section Break",
+   "label": "Calendly"
+  },
+  {
+   "depends_on": "eval:doc.provider==\"Calendly\"",
+   "description": "Your Calendly scheduling link, e.g. https://calendly.com/you/30min",
+   "fieldname": "calendly_url",
+   "fieldtype": "Data",
+   "label": "Calendly URL",
+   "options": "URL"
+  },
+  {
+   "depends_on": "eval:doc.provider==\"Native\"",
+   "fieldname": "section_native",
+   "fieldtype": "Section Break",
+   "label": "Native Availability"
+  },
+  {
+   "depends_on": "eval:doc.provider==\"Native\"",
+   "description": "JSON map of weekday → [[start, end], ...]. Keys: mon–sun. Example: {\"mon\":[[\"09:00\",\"17:00\"]]}",
+   "fieldname": "availability_json",
+   "fieldtype": "Code",
+   "label": "Availability JSON",
+   "options": "JSON"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.provider==\"Native\"",
+   "fieldname": "buffer_minutes",
+   "fieldtype": "Int",
+   "label": "Buffer (minutes)",
+   "non_negative": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-10-18 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "FCRM",
+ "name": "CRM Booking Profile",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales User"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

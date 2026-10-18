@@ -2,6 +2,56 @@ import frappe
 from frappe import _
 
 CRM_ALLOWED_ROLES = ["System Manager", "Sales Manager", "Sales User"]
+SALES_ROLES = ("Sales Manager", "Sales User")
+
+
+def is_desk_home_user(user: str | None = None) -> bool:
+	"""True for Administrator / System Manager — home is Frappe Desk, not CRM."""
+	user = user or frappe.session.user
+	if not user or user == "Guest":
+		return False
+	if user == "Administrator":
+		return True
+	return "System Manager" in frappe.get_roles(user)
+
+
+def get_website_user_home_page(user: str | None = None):
+	"""Hook: System Manager → desk; Sales Manager / Sales User → crm.
+
+	Runs before role_home_page so System Manager wins even when Sales roles
+	are also assigned.
+	"""
+	user = user or frappe.session.user
+	if is_desk_home_user(user):
+		return "desk"
+	roles = set(frappe.get_roles(user))
+	if roles.intersection(SALES_ROLES):
+		return "crm"
+	return None
+
+
+def smoke_desk_home_routing():
+	"""Dev smoke: home + /crm redirect policy for seeded role users."""
+	from frappe.website.utils import get_home_page
+
+	results = {}
+	for email in (
+		"system.manager@local.dev",
+		"sales.manager@local.dev",
+		"sales.user@local.dev",
+		"Administrator",
+	):
+		if email != "Administrator" and not frappe.db.exists("User", email):
+			results[email] = {"missing": True}
+			continue
+		frappe.set_user(email)
+		results[email] = {
+			"hook": get_website_user_home_page(email),
+			"home_page": get_home_page(),
+			"is_desk_home": is_desk_home_user(email),
+		}
+	frappe.set_user("Administrator")
+	return results
 
 
 def get_session_role_flags():
