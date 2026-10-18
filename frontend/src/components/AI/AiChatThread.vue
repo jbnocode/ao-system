@@ -54,7 +54,7 @@
             :class="[
               msg.blocks?.length ? 'max-w-full' : 'max-w-[85%]',
               msg.role === 'user'
-                ? 'rounded-5 bg-surface-gray-7 px-3.5 py-2.5 text-ink-white whitespace-pre-wrap'
+                ? 'rounded-5 bg-black px-3.5 py-2.5 text-ink-white whitespace-pre-wrap'
                 : 'rounded-5 bg-surface-gray-1 px-3.5 py-2.5 text-ink-gray-8',
             ]"
           >
