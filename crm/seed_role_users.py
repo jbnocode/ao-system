@@ -61,10 +61,8 @@ def execute():
 			user.append("roles", {"role": role})
 		user.new_password = spec["password"]
 
-		# System Manager administers from Desk → AO Management workspace
-		if "System Manager" in spec["roles"] and frappe.db.exists("Workspace", "AO Management"):
-			if hasattr(user, "default_workspace"):
-				user.default_workspace = "AO Management"
+		# Do not set default_workspace — Frappe would override home_page to Desk.
+		# System Managers log into /crm; open Desk manually when needed.
 
 		user.save()
 

@@ -68,13 +68,14 @@ doctype_js = {
 # application home page (will override Website Settings)
 # home_page = "login"
 
-# System Manager / Administrator → desk; Sales roles → crm (see session helper)
+# Administrator → desk; Sales / System Manager → crm (see session helper)
 get_website_user_home_page = ["crm.api.session.get_website_user_home_page"]
 
 # website user home page (by Role) — fallback if the hook returns None
 role_home_page = {
 	"Sales User": "crm",
 	"Sales Manager": "crm",
+	"System Manager": "crm",
 }
 
 website_route_rules = [

@@ -20,7 +20,7 @@ def get_context():
 	if not check_app_permission():
 		frappe.throw(_("You do not have permission to access Frappe CRM"), frappe.PermissionError)
 
-	# Platform admins manage the site from Desk, not the CRM SPA.
+	# Only Administrator is bounced to Desk; other roles use the CRM SPA.
 	if is_desk_home_user():
 		frappe.local.flags.redirect_location = "/desk"
 		redirect = frappe.Redirect()
