@@ -7,12 +7,23 @@ from __future__ import annotations
 
 PROVIDER_OPENAI = "OpenAI"
 PROVIDER_BEDROCK = "Amazon Bedrock"
+PROVIDER_OPENROUTER = "OpenRouter"
 PROVIDER_CUSTOM = "Custom"
 
 DEFAULT_OPENAI_BASE = "https://api.openai.com/v1"
 DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
 DEFAULT_BEDROCK_REGION = "us-east-1"
 DEFAULT_BEDROCK_MODEL = "openai.gpt-oss-20b-1:0"
+DEFAULT_OPENROUTER_BASE = "https://openrouter.ai/api/v1"
+# Auto-routes to a free model when available; override in Settings if needed.
+DEFAULT_OPENROUTER_MODEL = "openrouter/free"
+OPENROUTER_FREE_MODELS = (
+	"openrouter/free",
+	"google/gemma-4-26b-a4b-it:free",
+	"google/gemma-4-31b-it:free",
+	"nvidia/nemotron-3.5-lightning:free",
+	"thinkingmachines/inkling:free",
+)
 
 BEDROCK_REGIONS = (
 	"ap-southeast-2",
@@ -35,9 +46,12 @@ BEDROCK_MODELS = (
 
 def normalize_provider(provider: str | None) -> str:
 	value = (provider or "").strip()
-	if value in (PROVIDER_OPENAI, PROVIDER_BEDROCK, PROVIDER_CUSTOM):
+	if value in (PROVIDER_OPENAI, PROVIDER_BEDROCK, PROVIDER_OPENROUTER, PROVIDER_CUSTOM):
 		return value
 	# Infer from an existing base URL (pre-provider field installs)
+	raw = (provider or "").strip().lower()
+	if "openrouter" in raw:
+		return PROVIDER_OPENROUTER
 	return PROVIDER_OPENAI
 
 
@@ -55,6 +69,9 @@ def resolve_base_url(
 	p = normalize_provider(provider)
 	if p == PROVIDER_BEDROCK:
 		return bedrock_base_url(aws_region)
+	if p == PROVIDER_OPENROUTER:
+		raw = (base_url or "").strip().rstrip("/")
+		return raw or DEFAULT_OPENROUTER_BASE
 	raw = (base_url or "").strip().rstrip("/")
 	if raw:
 		return raw
@@ -65,11 +82,13 @@ def default_model_for(provider: str | None) -> str:
 	p = normalize_provider(provider)
 	if p == PROVIDER_BEDROCK:
 		return DEFAULT_BEDROCK_MODEL
+	if p == PROVIDER_OPENROUTER:
+		return DEFAULT_OPENROUTER_MODEL
 	return DEFAULT_OPENAI_MODEL
 
 
 def apply_provider_defaults(settings) -> None:
-	"""Fill base_url / model from provider when switching to Bedrock or OpenAI."""
+	"""Fill base_url / model from provider when switching presets."""
 	provider = normalize_provider(getattr(settings, "provider", None))
 	settings.provider = provider
 	if provider == PROVIDER_BEDROCK:
@@ -78,6 +97,10 @@ def apply_provider_defaults(settings) -> None:
 		settings.base_url = bedrock_base_url(region)
 		if not (getattr(settings, "model", None) or "").strip():
 			settings.model = DEFAULT_BEDROCK_MODEL
+	elif provider == PROVIDER_OPENROUTER:
+		settings.base_url = DEFAULT_OPENROUTER_BASE
+		if not (getattr(settings, "model", None) or "").strip():
+			settings.model = DEFAULT_OPENROUTER_MODEL
 	elif provider == PROVIDER_OPENAI:
 		if not (getattr(settings, "base_url", None) or "").strip():
 			settings.base_url = DEFAULT_OPENAI_BASE
@@ -88,9 +111,10 @@ def apply_provider_defaults(settings) -> None:
 def provider_catalog() -> dict:
 	"""JSON-friendly catalog for the settings UI."""
 	return {
-		"providers": [PROVIDER_OPENAI, PROVIDER_BEDROCK, PROVIDER_CUSTOM],
+		"providers": [PROVIDER_OPENAI, PROVIDER_BEDROCK, PROVIDER_OPENROUTER, PROVIDER_CUSTOM],
 		"bedrock_regions": list(BEDROCK_REGIONS),
 		"bedrock_models": list(BEDROCK_MODELS),
+		"openrouter_free_models": list(OPENROUTER_FREE_MODELS),
 		"defaults": {
 			PROVIDER_OPENAI: {
 				"base_url": DEFAULT_OPENAI_BASE,
@@ -100,6 +124,10 @@ def provider_catalog() -> dict:
 				"aws_region": DEFAULT_BEDROCK_REGION,
 				"base_url": bedrock_base_url(DEFAULT_BEDROCK_REGION),
 				"model": DEFAULT_BEDROCK_MODEL,
+			},
+			PROVIDER_OPENROUTER: {
+				"base_url": DEFAULT_OPENROUTER_BASE,
+				"model": DEFAULT_OPENROUTER_MODEL,
 			},
 			PROVIDER_CUSTOM: {
 				"base_url": DEFAULT_OPENAI_BASE,

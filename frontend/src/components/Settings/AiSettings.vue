@@ -59,6 +59,14 @@
           @update:modelValue="(v) => (form.model = v)"
         />
         <FormControl
+          v-else-if="isOpenRouter"
+          :modelValue="form.model"
+          type="select"
+          :label="__('Model')"
+          :options="openRouterModelOptions"
+          @update:modelValue="(v) => (form.model = v)"
+        />
+        <FormControl
           v-else
           v-model="form.model"
           :label="__('Model')"
@@ -71,20 +79,21 @@
             )
           }}
         </p>
+        <p v-else-if="isOpenRouter" class="-mt-2 text-p-sm text-ink-gray-5">
+          {{
+            __(
+              'Free models are rate-limited by OpenRouter. openrouter/free auto-picks an available free model.',
+            )
+          }}
+        </p>
 
         <FormControl
           v-model="form.api_key"
-          :label="isBedrock ? __('Bedrock API Key') : __('API Key')"
+          :label="apiKeyLabel"
           type="password"
         />
         <p class="-mt-2 text-p-sm text-ink-gray-5">
-          {{
-            isBedrock
-              ? __(
-                  'Paste an Amazon Bedrock API key (Bearer). Leave blank to keep the existing key.',
-                )
-              : __('Leave blank to keep the existing key.')
-          }}
+          {{ apiKeyHint }}
         </p>
 
         <FormControl
@@ -135,6 +144,7 @@ import {
   PROVIDER_BEDROCK,
   PROVIDER_CUSTOM,
   PROVIDER_OPENAI,
+  PROVIDER_OPENROUTER,
   applyProviderPreset,
   bedrockBaseUrl,
 } from '@/utils/aiProviders'
@@ -166,12 +176,34 @@ const form = reactive({
 })
 
 const isBedrock = computed(() => form.provider === PROVIDER_BEDROCK)
+const isOpenRouter = computed(() => form.provider === PROVIDER_OPENROUTER)
+
+const apiKeyLabel = computed(() => {
+  if (isBedrock.value) return __('Bedrock API Key')
+  if (isOpenRouter.value) return __('OpenRouter API Key')
+  return __('API Key')
+})
+
+const apiKeyHint = computed(() => {
+  if (isBedrock.value) {
+    return __(
+      'Paste an Amazon Bedrock API key (Bearer). Leave blank to keep the existing key.',
+    )
+  }
+  if (isOpenRouter.value) {
+    return __(
+      'Get a free key at openrouter.ai/keys. Leave blank to keep the existing key.',
+    )
+  }
+  return __('Leave blank to keep the existing key.')
+})
 
 const providerOptions = computed(() => {
   const list =
     catalog.value?.providers || [
       PROVIDER_OPENAI,
       PROVIDER_BEDROCK,
+      PROVIDER_OPENROUTER,
       PROVIDER_CUSTOM,
     ]
   return list.map((value) => ({ label: value, value }))
@@ -194,6 +226,20 @@ const bedrockModelOptions = computed(() => {
   const list = catalog.value?.bedrock_models || [
     'openai.gpt-oss-20b-1:0',
     'openai.gpt-oss-120b-1:0',
+  ]
+  const opts = list.map((value) => ({ label: value, value }))
+  if (form.model && !list.includes(form.model)) {
+    opts.unshift({ label: form.model, value: form.model })
+  }
+  return opts
+})
+
+const openRouterModelOptions = computed(() => {
+  const list = catalog.value?.openrouter_free_models || [
+    'openrouter/free',
+    'google/gemma-4-26b-a4b-it:free',
+    'google/gemma-4-31b-it:free',
+    'nvidia/nemotron-3.5-lightning:free',
   ]
   const opts = list.map((value) => ({ label: value, value }))
   if (form.model && !list.includes(form.model)) {

@@ -14,6 +14,7 @@ from crm.ai.credits import consume, ensure_balance, get_balance, get_settings
 from crm.ai.demo import demo_response
 from crm.ai.providers import (
 	PROVIDER_BEDROCK,
+	PROVIDER_OPENROUTER,
 	normalize_provider,
 	provider_catalog,
 	resolve_base_url,
@@ -245,12 +246,18 @@ def _call_openai(settings, api_key: str, messages: list, context: dict) -> dict:
 		)
 
 	model = (settings.model or "").strip() or "gpt-4o-mini"
+	headers = {
+		"Authorization": f"Bearer {api_key}",
+		"Content-Type": "application/json",
+	}
+	if provider == PROVIDER_OPENROUTER:
+		# Recommended by OpenRouter for ranking / free-tier routing.
+		site = (frappe.utils.get_url() or "").rstrip("/") or "https://ao-crm.local"
+		headers["HTTP-Referer"] = site
+		headers["X-Title"] = "AO CRM"
 	resp = requests.post(
 		url,
-		headers={
-			"Authorization": f"Bearer {api_key}",
-			"Content-Type": "application/json",
-		},
+		headers=headers,
 		json={
 			"model": model,
 			"messages": payload_messages,

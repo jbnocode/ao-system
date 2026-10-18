@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_BEDROCK_MODEL,
   DEFAULT_OPENAI_MODEL,
+  DEFAULT_OPENROUTER_BASE,
+  DEFAULT_OPENROUTER_MODEL,
   PROVIDER_BEDROCK,
   PROVIDER_OPENAI,
+  PROVIDER_OPENROUTER,
   applyProviderPreset,
   bedrockBaseUrl,
   resolveBaseUrl,
@@ -47,5 +50,18 @@ describe('aiProviders', () => {
     )
     expect(next.model).toBe(DEFAULT_OPENAI_MODEL)
     expect(next.base_url).toBe('https://api.openai.com/v1')
+  })
+
+  it('applies openrouter free preset', () => {
+    const next = applyProviderPreset(
+      { provider: PROVIDER_OPENAI, model: 'gpt-4o-mini', base_url: '' },
+      PROVIDER_OPENROUTER,
+    )
+    expect(next.provider).toBe(PROVIDER_OPENROUTER)
+    expect(next.base_url).toBe(DEFAULT_OPENROUTER_BASE)
+    expect(next.model).toBe(DEFAULT_OPENROUTER_MODEL)
+    expect(resolveBaseUrl(PROVIDER_OPENROUTER, '', '')).toBe(
+      DEFAULT_OPENROUTER_BASE,
+    )
   })
 })

@@ -35,7 +35,7 @@
    "fieldname": "provider",
    "fieldtype": "Select",
    "label": "Provider",
-   "options": "OpenAI\nAmazon Bedrock\nCustom"
+   "options": "OpenAI\nAmazon Bedrock\nOpenRouter\nCustom"
   },
   {
    "default": "us-east-1",
