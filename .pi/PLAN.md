@@ -4,6 +4,102 @@
 > **Completed phases**: [ARCHIVE.md](./ARCHIVE.md)  
 > **Stable API contracts**: [SPEC.md](./SPEC.md)
 
+### AO — Life Case hub (shipped)
+
+Person-first Cases on top of CRM Deal (`life_agency_mode`), Household contacts +
+relationship, Quote/App/Policy journey, Deal assistant. See [AO_CHANGES.md](../AO_CHANGES.md)
+and `crm/life/`. UI work: [`.cursor/skills/frappe-uiux/SKILL.md`](../.cursor/skills/frappe-uiux/SKILL.md).
+
+---
+
+## Insurance ops nav — Quoting / Policies / Documents
+
+> **Product track (can ship in parallel with Phase 3B).** Sidebar divider + three
+> list pages. Case remains system of record; these pages are cross-Case work queues.
+> No company-branded product seed. AI quoting uses a generic indicative catalog →
+> save as Insurance Quote on the Case (live carrier API = later / partner).
+
+### Decisions (locked)
+
+| Question | Recommendation |
+|---|---|
+| Applications | **Tab under Quoting** (not its own nav item) — quote→app is one sales motion |
+| Divider position | **After Cases** (primary insurance ops), before Contacts — not buried in Tools |
+| Documents scope (v1) | **CRM Deal attachments only**; Lead/Contact files later |
+| Quoting nav label | **Quoting** (verb/work area; page title can say “Quotes”) |
+| AI quoting | CTA on Quoting + existing AI chat; catalog → **Save to Case**; label rates indicative |
+| Renewals / commissions / e-sign | **Out of v1** |
+
+### Nav shape
+
+```
+Dashboard
+Leads
+Cases (Deals)
+── divider ──
+Quoting          ← Quotes list + Applications tab
+Policies         ← Policy book list
+Documents        ← Files linked to Cases
+Contacts
+Tasks
+Notes
+AI
+── divider (tools) ──
+…
+```
+
+### Page contents (v1)
+
+**Quoting** (`/crm/quoting`)
+
+- Tab **Quotes**: list `Insurance Quote` — filters status / carrier / date; row → Case `#quotes`
+- Tab **Applications**: list `Insurance Application` — row → Case `#applications`
+- Empty state: open a Case → Quotes tab; optional “Ask AI” → AI route
+- No live multi-carrier engine in v1
+
+**Policies** (`/crm/policies`)
+
+- List `Insurance Policy` — filters In Force / Pending / Lapsed / Cancelled
+- Summary chips (counts by status)
+- Row → Case `#policies`
+- Renewals 30/60/90 = phase 2 (needs anniversary/renewal fields)
+
+**Documents** (`/crm/documents`)
+
+- Index of File rows attached to CRM Deal
+- Filters: Case, date, uploader; download / open Case
+- Upload requires picking a Case (no orphans)
+- Soft tags later: Illustration · App packet · ID · Policy delivery
+- Keep **Forms** under Tools (intake builders ≠ file vault)
+
+### Build order
+
+1. Nav group + routes + empty shells (frappe-ui list density)
+2. Policies list + Case deep-link
+3. Quoting (Quotes + Applications tabs) + Case deep-link
+4. Documents index (Deal files) + open Case
+5. Wire AI “save quotes to Case” from Quoting CTA / chat (catalog, indicative)
+6. Phase 2: renewals queue, richer doc tags, Lead files, partner quoter if needed
+
+### Checklist
+
+- [x] `navigation.js` — new `group: 'insurance'` divider after Cases
+- [x] Routes: Quoting, Policies, Documents
+- [x] `Policies.vue` list
+- [x] `Quoting.vue` (Quotes + Applications tabs)
+- [x] `Documents.vue` (Deal-linked files)
+- [x] Deep-link to Deal hash tabs
+- [x] Nav + unit tests
+- [ ] AI “save quotes to Case” from Quoting CTA / chat (catalog, indicative)
+- [ ] UI: [frappe-uiux skill](../.cursor/skills/frappe-uiux/SKILL.md)
+
+### Non-goals (v1)
+
+- Standalone Insurance tutorial hub
+- Open/public carrier quote APIs
+- Company-specific product catalogs in seed data
+- Commission / certificate / ACORD modules
+
 ---
 
 ## Implementation Order
@@ -12,7 +108,8 @@
 |---|---|---|---|
 | ~~1~~ | ~~Phase 3A — FieldLayout standalone mode~~ | ~~Small~~ | ✅ Done — [see ARCHIVE](./ARCHIVE.md#phase-3a--fieldlayout-standalone-mode) |
 | ~~2~~ | ~~Phase 2 — formDialog()~~ | ~~Medium~~ | ✅ Done — [see ARCHIVE](./ARCHIVE.md#phase-2--formdialog) |
-| **3** | [Phase 3B — Full decouple (Grid independent)](#phase-3b--full-decouple-grid-independent) | Structural refactor | 🔜 Next |
+| **—** | [Insurance ops nav](#insurance-ops-nav--quoting--policies--documents) | Product (lists + divider) | 📋 Planned — parallel OK |
+| **3** | [Phase 3B — Full decouple (Grid independent)](#phase-3b--full-decouple-grid-independent) | Structural refactor | 🔜 Next (scripting track) |
 | **4** | [Phase 4 — getMeta single source of truth](#phase-4--getmeta-single-source-of-truth) | Architectural cleanup | After 3B |
 | **5** | [Phase 6 — More Capabilities (selected)](#phase-6--more-capabilities-selected) | Feature expansion | After 4 |
 | **6** | [Phase 5 — Scripting DX Rethink](#phase-5--scripting-dx-rethink) | Syntax/API redesign | Last |
