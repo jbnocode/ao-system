@@ -54,11 +54,16 @@
             :class="[
               msg.blocks?.length ? 'max-w-full' : 'max-w-[85%]',
               msg.role === 'user'
-                ? 'rounded-5 bg-black px-3.5 py-2.5 text-ink-white whitespace-pre-wrap'
+                ? 'rounded-5 bg-black px-3.5 py-2.5 text-white whitespace-pre-wrap'
                 : 'rounded-5 bg-surface-gray-1 px-3.5 py-2.5 text-ink-gray-8',
             ]"
           >
-            <div class="whitespace-pre-wrap">{{ msg.content }}</div>
+            <div
+              class="whitespace-pre-wrap"
+              :class="msg.role === 'user' ? 'text-white' : ''"
+            >
+              {{ msg.content }}
+            </div>
             <template v-for="(block, bi) in msg.blocks || []" :key="bi">
               <AiInsuranceBlock
                 v-if="block.type === 'insurance'"
