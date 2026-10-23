@@ -52,6 +52,10 @@ class VapiClient:
 		data = self.request("GET", "/phone-number")
 		return data if isinstance(data, list) else []
 
+	def get_phone_number(self, phone_id: str) -> dict:
+		data = self.request("GET", f"/phone-number/{phone_id}")
+		return data if isinstance(data, dict) else {}
+
 	def import_twilio_number(
 		self,
 		number: str,
@@ -72,8 +76,30 @@ class VapiClient:
 			payload["name"] = name
 		return self.request("POST", "/phone-number", payload)
 
+	def create_vapi_phone_number(
+		self,
+		name: str | None = None,
+		assistant_id: str | None = None,
+		area_code: str | None = None,
+		server: dict | None = None,
+	) -> dict:
+		"""Purchase/create a Vapi-hosted phone number."""
+		payload: dict = {"provider": "vapi"}
+		if name:
+			payload["name"] = name
+		if assistant_id:
+			payload["assistantId"] = assistant_id
+		if area_code:
+			payload["numberDesiredAreaCode"] = str(area_code).strip()
+		if server:
+			payload["server"] = server
+		return self.request("POST", "/phone-number", payload)
+
 	def update_phone_number(self, phone_id: str, payload: dict) -> dict:
 		return self.request("PATCH", f"/phone-number/{phone_id}", payload)
+
+	def delete_phone_number(self, phone_id: str) -> dict:
+		return self.request("DELETE", f"/phone-number/{phone_id}")
 
 	def create_assistant(self, payload: dict) -> dict:
 		return self.request("POST", "/assistant", payload)
@@ -83,6 +109,14 @@ class VapiClient:
 
 	def get_assistant(self, assistant_id: str) -> dict:
 		return self.request("GET", f"/assistant/{assistant_id}")
+
+	def list_assistants(self) -> list:
+		data = self.request("GET", "/assistant")
+		return data if isinstance(data, list) else []
+
+	def list_squads(self) -> list:
+		data = self.request("GET", "/squad")
+		return data if isinstance(data, list) else []
 
 	def create_call(self, payload: dict) -> dict:
 		return self.request("POST", "/call", payload)
@@ -97,7 +131,6 @@ class VapiClient:
 				query = "?" + urlencode(filtered)
 		data = self.request("GET", f"/call{query}")
 		return data if isinstance(data, list) else []
-
 
 def _private_key(settings) -> str:
 	try:

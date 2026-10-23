@@ -197,6 +197,306 @@ def list_twilio_numbers_for_link() -> list:
 	return out
 
 
+def _serialize_vapi_phone(row: dict, linked: dict | None = None) -> dict:
+	phone = _normalize_phone(row.get("number") or row.get("phoneNumber") or "")
+	server = row.get("server") if isinstance(row.get("server"), dict) else {}
+	fallback = row.get("fallbackDestination") if isinstance(row.get("fallbackDestination"), dict) else {}
+	agent = (linked or {}).get(phone) if phone else None
+	if not agent and row.get("id"):
+		# Match by Vapi phone id when E.164 missing/mismatched
+		for a in (linked or {}).values():
+			if a and a.get("vapi_phone_id") == row.get("id"):
+				agent = a
+				break
+	return {
+		"id": row.get("id") or "",
+		"phone_number": phone,
+		"name": row.get("name") or "",
+		"provider": row.get("provider") or "",
+		"status": row.get("status") or "",
+		"assistant_id": row.get("assistantId") or "",
+		"squad_id": row.get("squadId") or "",
+		"workflow_id": row.get("workflowId") or "",
+		"server_url": server.get("url") or "",
+		"fallback_number": _normalize_phone(fallback.get("number") or "") if fallback else "",
+		"ai_linked": bool(agent and agent.get("vapi_phone_id")),
+		"ai_user": agent.get("user") if agent else None,
+		"ai_user_name": agent.get("user_name") if agent else None,
+	}
+
+
+def _linked_agents_by_phone() -> dict:
+	rows = frappe.get_all(
+		"CRM AI Caller Agent",
+		fields=["name", "user", "user_name", "phone_number", "vapi_phone_id", "vapi_assistant_id"],
+		filters={"phone_number": ["is", "set"]},
+	)
+	return {_normalize_phone(r.phone_number): r for r in rows if r.phone_number}
+
+
+def _default_phone_server() -> dict | None:
+	"""CRM webhook URL (+ optional bearer) for number-level server config."""
+	server = {"url": _webhook_url(), "timeoutSeconds": 20}
+	try:
+		secret = frappe.get_single("CRM Vapi Settings").get_password("webhook_secret") or ""
+	except Exception:
+		secret = ""
+	if secret:
+		server["headers"] = {"Authorization": f"Bearer {secret}"}
+	return server
+
+
+@frappe.whitelist()
+def list_vapi_phone_numbers() -> list:
+	"""Phone numbers on the connected Vapi account (any provider)."""
+	_require_manager()
+	client = get_client()
+	linked = _linked_agents_by_phone()
+	out = []
+	for row in client.list_phone_numbers() or []:
+		if isinstance(row, dict):
+			out.append(_serialize_vapi_phone(row, linked))
+	return out
+
+
+@frappe.whitelist()
+def list_vapi_assistants() -> list:
+	"""Assistants available to attach to a phone number."""
+	_require_manager()
+	client = get_client()
+	out = []
+	for row in client.list_assistants() or []:
+		if not isinstance(row, dict):
+			continue
+		out.append({"id": row.get("id") or "", "name": row.get("name") or row.get("id") or ""})
+	return out
+
+
+@frappe.whitelist()
+def list_vapi_squads() -> list:
+	"""Squads available to attach to a phone number."""
+	_require_manager()
+	client = get_client()
+	out = []
+	try:
+		rows = client.list_squads() or []
+	except Exception:
+		rows = []
+	for row in rows:
+		if not isinstance(row, dict):
+			continue
+		out.append({"id": row.get("id") or "", "name": row.get("name") or row.get("id") or ""})
+	return out
+
+
+@frappe.whitelist()
+def update_vapi_phone_number(
+	phone_id: str,
+	name: str | None = None,
+	assistant_id: str | None = None,
+	squad_id: str | None = None,
+	workflow_id: str | None = None,
+	server_url: str | None = None,
+	fallback_number: str | None = None,
+	clear_assistant: int | str | None = None,
+	clear_squad: int | str | None = None,
+	clear_workflow: int | str | None = None,
+	use_crm_webhook: int | str | None = None,
+) -> dict:
+	"""Patch Vapi phone-number settings (name, inbound assistant/squad/workflow, server, fallback)."""
+	_require_manager()
+	phone_id = (phone_id or "").strip()
+	if not phone_id:
+		frappe.throw(_("Phone number id is required"))
+
+	client = get_client()
+	payload: dict = {}
+
+	if name is not None:
+		payload["name"] = (name or "").strip() or None
+
+	# Inbound routing — only one of assistant / squad / workflow should win; clear others when set
+	if clear_assistant and int(clear_assistant or 0):
+		payload["assistantId"] = None
+	elif assistant_id is not None:
+		aid = (assistant_id or "").strip()
+		payload["assistantId"] = aid or None
+		if aid:
+			payload["squadId"] = None
+			payload["workflowId"] = None
+
+	if clear_squad and int(clear_squad or 0):
+		payload["squadId"] = None
+	elif squad_id is not None and "assistantId" not in payload:
+		sid = (squad_id or "").strip()
+		payload["squadId"] = sid or None
+		if sid:
+			payload["assistantId"] = None
+			payload["workflowId"] = None
+
+	if clear_workflow and int(clear_workflow or 0):
+		payload["workflowId"] = None
+	elif workflow_id is not None and "assistantId" not in payload and "squadId" not in payload:
+		wid = (workflow_id or "").strip()
+		payload["workflowId"] = wid or None
+		if wid:
+			payload["assistantId"] = None
+			payload["squadId"] = None
+
+	if use_crm_webhook is not None and int(use_crm_webhook or 0):
+		payload["server"] = _default_phone_server()
+	elif server_url is not None:
+		url = (server_url or "").strip()
+		if url:
+			server = {"url": url, "timeoutSeconds": 20}
+			try:
+				secret = frappe.get_single("CRM Vapi Settings").get_password("webhook_secret") or ""
+			except Exception:
+				secret = ""
+			if secret:
+				server["headers"] = {"Authorization": f"Bearer {secret}"}
+			payload["server"] = server
+		else:
+			payload["server"] = None
+
+	if fallback_number is not None:
+		fb = _normalize_phone(fallback_number)
+		payload["fallbackDestination"] = {"type": "number", "number": fb} if fb else None
+
+	if not payload:
+		frappe.throw(_("No changes to save"))
+
+	updated = client.update_phone_number(phone_id, payload)
+	linked = _linked_agents_by_phone()
+
+	# Keep CRM agent assistant id in sync when inbound assistant changes
+	aid = updated.get("assistantId") if isinstance(updated, dict) else None
+	phone = _normalize_phone((updated or {}).get("number") or "") if isinstance(updated, dict) else ""
+	if phone and aid:
+		for agent_row in frappe.get_all(
+			"CRM AI Caller Agent",
+			filters={"vapi_phone_id": phone_id},
+			fields=["name"],
+		):
+			frappe.db.set_value("CRM AI Caller Agent", agent_row.name, "vapi_assistant_id", aid)
+
+	frappe.db.commit()
+	return _serialize_vapi_phone(updated if isinstance(updated, dict) else client.get_phone_number(phone_id), linked)
+
+
+@frappe.whitelist()
+def create_vapi_phone_number(
+	name: str | None = None,
+	area_code: str | None = None,
+	assistant_id: str | None = None,
+	assign_to: str | None = None,
+	use_crm_webhook: int | str | None = 1,
+) -> dict:
+	"""Buy/create a Vapi-hosted number; optionally assign to a CRM user."""
+	_require_manager()
+	client = get_client()
+	server = _default_phone_server() if int(use_crm_webhook or 0) else None
+	created = client.create_vapi_phone_number(
+		name=(name or "").strip() or None,
+		assistant_id=(assistant_id or "").strip() or None,
+		area_code=(area_code or "").strip() or None,
+		server=server,
+	)
+	if not isinstance(created, dict) or not created.get("id"):
+		frappe.throw(_("Vapi did not return a phone number id"))
+
+	result = _serialize_vapi_phone(created, _linked_agents_by_phone())
+	if assign_to:
+		result["assignment"] = link_vapi_number(phone_id=created["id"], user=assign_to)
+	return result
+
+
+@frappe.whitelist()
+def delete_vapi_phone_number(phone_id: str) -> dict:
+	"""Release/delete a phone number from the Vapi account."""
+	_require_manager()
+	phone_id = (phone_id or "").strip()
+	if not phone_id:
+		frappe.throw(_("Phone number id is required"))
+
+	client = get_client()
+	client.delete_phone_number(phone_id)
+
+	# Clear CRM agents that pointed at this number
+	for row in frappe.get_all("CRM AI Caller Agent", filters={"vapi_phone_id": phone_id}, fields=["name"]):
+		frappe.db.set_value(
+			"CRM AI Caller Agent",
+			row.name,
+			{"vapi_phone_id": "", "phone_number": "", "vapi_assistant_id": ""},
+		)
+	frappe.db.commit()
+	return {"ok": True, "phone_id": phone_id}
+
+
+@frappe.whitelist()
+def link_vapi_number(phone_id: str, user: str) -> dict:
+	"""Assign an existing Vapi phone number to a CRM user (no Twilio import)."""
+	_require_manager()
+	phone_id = (phone_id or "").strip()
+	user = (user or "").strip()
+	if not phone_id or not user:
+		frappe.throw(_("Phone number id and user are required"))
+	if not frappe.db.exists("User", user):
+		frappe.throw(_("User {0} not found").format(user))
+
+	client = get_client()
+	row = client.get_phone_number(phone_id)
+	if not isinstance(row, dict) or not row.get("id"):
+		frappe.throw(_("Vapi phone number not found"))
+
+	phone_number = _normalize_phone(row.get("number") or row.get("phoneNumber") or "")
+	if not phone_number:
+		frappe.throw(_("Vapi phone number has no E.164 number"))
+
+	# Clear this number from other agents
+	for other in frappe.get_all(
+		"CRM AI Caller Agent",
+		filters={"vapi_phone_id": phone_id, "name": ["!=", user]},
+		pluck="name",
+	):
+		frappe.db.set_value(
+			"CRM AI Caller Agent",
+			other,
+			{"vapi_phone_id": "", "phone_number": "", "vapi_assistant_id": ""},
+		)
+
+	_ensure_telephony_number(user, phone_number)
+	agent = _get_or_create_agent(user)
+
+	assistant_id = row.get("assistantId") or agent.vapi_assistant_id
+	# Ignore local demo placeholders
+	if assistant_id and str(assistant_id).startswith("demo_"):
+		assistant_id = None
+	if not assistant_id:
+		assistant = client.create_assistant(
+			_assistant_payload(
+				user=user,
+				voice_id=agent.voice_id or "warm",
+				script_id=agent.script_id or "term",
+			)
+		)
+		assistant_id = assistant.get("id")
+		try:
+			client.update_phone_number(
+				phone_id,
+				{"assistantId": assistant_id, "server": _default_phone_server()},
+			)
+		except Exception:
+			frappe.log_error(title=_("Vapi phone assistant link failed"))
+
+	agent.phone_number = phone_number
+	agent.vapi_phone_id = phone_id
+	agent.vapi_assistant_id = assistant_id
+	agent.save(ignore_permissions=True)
+	frappe.db.commit()
+	return _serialize_agent(agent)
+
+
 @frappe.whitelist()
 def link_and_assign(phone_number: str, user: str) -> dict:
 	"""Import Twilio number into Vapi (if needed), create/update assistant, assign to user."""
@@ -208,10 +508,15 @@ def link_and_assign(phone_number: str, user: str) -> dict:
 	if not frappe.db.exists("User", user):
 		frappe.throw(_("User {0} not found").format(user))
 
+	# If this number already exists on Vapi, link without Twilio import
+	client = get_client()
+	existing_id = _find_vapi_phone_id(client, phone_number)
+	if existing_id:
+		return link_vapi_number(phone_id=existing_id, user=user)
+
 	# Ensure telephony agent has the number for human dialer consistency
 	_ensure_telephony_number(user, phone_number)
 
-	client = get_client()
 	twilio = frappe.get_single("CRM Twilio Settings")
 	account_sid = twilio.account_sid
 	try:
@@ -223,6 +528,8 @@ def link_and_assign(phone_number: str, user: str) -> dict:
 
 	agent = _get_or_create_agent(user)
 	assistant_id = agent.vapi_assistant_id
+	if assistant_id and str(assistant_id).startswith("demo_"):
+		assistant_id = None
 	if not assistant_id:
 		assistant = client.create_assistant(
 			_assistant_payload(
@@ -235,6 +542,8 @@ def link_and_assign(phone_number: str, user: str) -> dict:
 		agent.vapi_assistant_id = assistant_id
 
 	phone_id = agent.vapi_phone_id if agent.phone_number == phone_number else None
+	if phone_id and str(phone_id).startswith("demo_"):
+		phone_id = None
 	if not phone_id:
 		phone_id = _find_vapi_phone_id(client, phone_number)
 	if not phone_id:
@@ -254,7 +563,10 @@ def link_and_assign(phone_number: str, user: str) -> dict:
 				raise
 	if phone_id:
 		try:
-			client.update_phone_number(phone_id, {"assistantId": assistant_id})
+			client.update_phone_number(
+				phone_id,
+				{"assistantId": assistant_id, "server": _default_phone_server()},
+			)
 		except Exception:
 			frappe.log_error(title=_("Vapi phone assistant link failed"))
 
@@ -264,7 +576,6 @@ def link_and_assign(phone_number: str, user: str) -> dict:
 	agent.save(ignore_permissions=True)
 	frappe.db.commit()
 	return _serialize_agent(agent)
-
 
 @frappe.whitelist()
 def unassign_agent(user: str) -> dict:
