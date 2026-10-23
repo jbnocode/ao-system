@@ -235,16 +235,19 @@ def _linked_agents_by_phone() -> dict:
 
 
 def _default_phone_server() -> dict | None:
-	"""CRM webhook URL (+ optional bearer) for number-level server config."""
+	"""CRM webhook URL (+ optional secret header) for number-level server config.
+
+	Uses X-CRM-Vapi-Secret (not Authorization) so Frappe does not treat the
+	value as an API key / OAuth bearer before the guest webhook runs.
+	"""
 	server = {"url": _webhook_url(), "timeoutSeconds": 20}
 	try:
 		secret = frappe.get_single("CRM Vapi Settings").get_password("webhook_secret") or ""
 	except Exception:
 		secret = ""
 	if secret:
-		server["headers"] = {"Authorization": f"Bearer {secret}"}
+		server["headers"] = {"X-CRM-Vapi-Secret": secret}
 	return server
-
 
 @frappe.whitelist()
 def list_vapi_phone_numbers() -> list:
@@ -354,7 +357,7 @@ def update_vapi_phone_number(
 			except Exception:
 				secret = ""
 			if secret:
-				server["headers"] = {"Authorization": f"Bearer {secret}"}
+				server["headers"] = {"X-CRM-Vapi-Secret": secret}
 			payload["server"] = server
 		else:
 			payload["server"] = None
@@ -970,9 +973,14 @@ def _validate_webhook_auth():
 		secret = ""
 	if not secret:
 		return
-	auth = (frappe.request.headers.get("Authorization") or "").strip()
-	expected = f"Bearer {secret}"
-	if auth != expected:
+	headers = frappe.request.headers
+	# Prefer custom header — Authorization: Bearer is intercepted by Frappe auth.
+	provided = (headers.get("X-CRM-Vapi-Secret") or "").strip()
+	if not provided:
+		auth = (headers.get("Authorization") or "").strip()
+		if auth.lower().startswith("bearer "):
+			provided = auth[7:].strip()
+	if provided != secret:
 		frappe.throw(_("Invalid webhook authorization"), frappe.AuthenticationError)
 
 
@@ -1360,16 +1368,10 @@ def _assistant_payload(user: str, voice_id: str, script_id: str) -> dict:
 	full_name = frappe.db.get_value("User", user, "full_name") or user.split("@")[0]
 	agent_name = (full_name or "your agent").split()[0]
 	first = (pack.get("first_message") or "").format(agent_name=agent_name)
-	server = {
+	server = _default_phone_server() or {
 		"url": _webhook_url(),
 		"timeoutSeconds": 20,
 	}
-	try:
-		secret = frappe.get_single("CRM Vapi Settings").get_password("webhook_secret") or ""
-	except Exception:
-		secret = ""
-	if secret:
-		server["headers"] = {"Authorization": f"Bearer {secret}"}
 	return {
 		"name": f"AO {full_name}",
 		"firstMessage": first,
