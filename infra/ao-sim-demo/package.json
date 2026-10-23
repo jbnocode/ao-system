@@ -1,0 +1,23 @@
+{
+  "name": "ao-sim-demo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AO Simulation Game — disposable all-AWS demo (ap-southeast-2). See .pi/feats/simulation-game/spec.md §11.",
+  "scripts": {
+    "synth": "cdk synth --strict",
+    "diff": "cdk diff",
+    "deploy": "cdk deploy",
+    "destroy": "cdk destroy",
+    "test": "node --test test/stack.test.js"
+  },
+  "devDependencies": {
+    "aws-cdk": "^2.214.0"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.214.0",
+    "constructs": "^10.4.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
