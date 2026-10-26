@@ -9,6 +9,10 @@
   "user_name",
   "column_break_phone",
   "phone_number",
+  "section_live",
+  "live_voice_id",
+  "column_break_live_prompt",
+  "live_voice_prompt",
   "section_vapi",
   "vapi_phone_id",
   "column_break_asst",
@@ -53,9 +57,29 @@
    "options": "Phone"
   },
   {
+   "fieldname": "section_live",
+   "fieldtype": "Section Break",
+   "label": "GPT Live"
+  },
+  {
+   "description": "OpenAI prompt-to-voice id, or leave empty to use built-in / org default.",
+   "fieldname": "live_voice_id",
+   "fieldtype": "Data",
+   "label": "Live Voice ID"
+  },
+  {
+   "fieldname": "column_break_live_prompt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "live_voice_prompt",
+   "fieldtype": "Small Text",
+   "label": "Live Voice Prompt"
+  },
+  {
    "fieldname": "section_vapi",
    "fieldtype": "Section Break",
-   "label": "Vapi"
+   "label": "Vapi (Legacy)"
   },
   {
    "fieldname": "vapi_phone_id",
@@ -79,6 +103,7 @@
    "label": "Agent Setup"
   },
   {
+   "description": "Built-in Live voice preset (cedar, marin, …) when no prompt voice id.",
    "fieldname": "voice_id",
    "fieldtype": "Data",
    "label": "Voice ID"

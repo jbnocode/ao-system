@@ -250,12 +250,6 @@ router.beforeEach(async (to, from, next) => {
 
   const isAdminUser = isLoggedIn && (isAdmin() || user === 'Administrator')
 
-  // System Manager / Administrator home is Frappe Desk, not CRM.
-  if (isAdminUser) {
-    window.location.href = '/desk'
-    return next(false)
-  }
-
   // Only admins who haven't finished may reach the wizard, even via direct URL.
   if (isLoggedIn && to.name === 'Onboarding') {
     try {
@@ -289,31 +283,11 @@ router.beforeEach(async (to, from, next) => {
   } else if (to.name === 'Not Permitted' && isLoggedIn && isCrmUser()) {
     next({ name: 'Home' })
   } else if (to.name === 'Home' && isLoggedIn) {
-    const { views, getDefaultView } = viewsStore()
-    await views.promise
-
-    let defaultView = getDefaultView()
-    if (!defaultView) {
-      next({ name: 'Leads' })
-      return
-    }
-
-    let { route_name, type, name, is_standard } = defaultView
-    route_name = route_name || 'Leads'
-
-    if (name && !is_standard) {
-      next({
-        name: route_name,
-        params: { viewType: type },
-        query: { view: name },
-      })
-    } else {
-      next({ name: route_name, params: { viewType: type } })
-    }
+    next({ name: 'AI' })
   } else if (!isLoggedIn && to.meta?.public) {
     next()
   } else if (!isLoggedIn) {
-    window.location.href = '/login?redirect-to=/crm'
+    window.location.href = '/login?redirect-to=/crm/ai'
   } else if (to.matched.length === 0) {
     next({ name: 'Invalid Page' })
   } else if (['Deal', 'Lead'].includes(to.name) && !to.hash) {

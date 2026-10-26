@@ -15,17 +15,9 @@ no_cache = 1
 
 def get_context():
 	from crm.api import check_app_permission
-	from crm.api.session import is_desk_home_user
 
 	if not check_app_permission():
 		frappe.throw(_("You do not have permission to access Frappe CRM"), frappe.PermissionError)
-
-	# Only Administrator is bounced to Desk; other roles use the CRM SPA.
-	if is_desk_home_user():
-		frappe.local.flags.redirect_location = "/desk"
-		redirect = frappe.Redirect()
-		redirect.http_status_code = 302
-		raise redirect
 
 	redirect_to_set_password()
 
@@ -125,4 +117,4 @@ def get_state_options() -> dict[str, list[str]]:
 
 
 def get_default_route():
-	return "/crm"
+	return "/crm/ai"

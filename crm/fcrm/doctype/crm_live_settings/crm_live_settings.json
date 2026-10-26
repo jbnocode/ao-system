@@ -1,0 +1,180 @@
+{
+ "actions": [],
+ "creation": "2026-10-26 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "enabled",
+  "section_keys",
+  "openai_api_key",
+  "column_break_project",
+  "openai_project_id",
+  "section_defaults",
+  "default_voice_id",
+  "default_live_voice_id",
+  "column_break_prompt",
+  "default_live_voice_prompt",
+  "default_script_id",
+  "section_hours",
+  "calling_hours_start",
+  "calling_hours_end",
+  "section_twilio",
+  "media_stream_url",
+  "sip_provider_url",
+  "column_break_sip",
+  "sip_username",
+  "sip_password",
+  "section_webhook",
+  "webhook_secret"
+ ],
+ "fields": [
+  {
+   "default": "0",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "fieldname": "section_keys",
+   "fieldtype": "Section Break",
+   "label": "OpenAI"
+  },
+  {
+   "description": "Project API key with GPT-Live access. Server-side only.",
+   "fieldname": "openai_api_key",
+   "fieldtype": "Password",
+   "label": "OpenAI API Key"
+  },
+  {
+   "fieldname": "column_break_project",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Optional proj_… id for SIP / dashboard links.",
+   "fieldname": "openai_project_id",
+   "fieldtype": "Data",
+   "label": "OpenAI Project ID"
+  },
+  {
+   "fieldname": "section_defaults",
+   "fieldtype": "Section Break",
+   "label": "Defaults"
+  },
+  {
+   "default": "cedar",
+   "description": "Built-in Live voice when no prompt-to-voice id is set.",
+   "fieldname": "default_voice_id",
+   "fieldtype": "Select",
+   "label": "Default Built-in Voice",
+   "options": "cedar\nmarin\nalloy\necho\nshimmer"
+  },
+  {
+   "description": "OpenAI prompt-to-voice id (voice_…). Overrides built-in voice when set.",
+   "fieldname": "default_live_voice_id",
+   "fieldtype": "Data",
+   "label": "Default Prompt Voice ID"
+  },
+  {
+   "fieldname": "column_break_prompt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Description used when creating org prompt-to-voice.",
+   "fieldname": "default_live_voice_prompt",
+   "fieldtype": "Small Text",
+   "label": "Default Voice Prompt"
+  },
+  {
+   "default": "term",
+   "fieldname": "default_script_id",
+   "fieldtype": "Select",
+   "label": "Default Script",
+   "options": "iul\nibc\nfinal_expense\nterm\ncustom"
+  },
+  {
+   "fieldname": "section_hours",
+   "fieldtype": "Section Break",
+   "label": "Calling Hours"
+  },
+  {
+   "default": "8",
+   "fieldname": "calling_hours_start",
+   "fieldtype": "Int",
+   "label": "Calling Hours Start",
+   "non_negative": 1
+  },
+  {
+   "default": "21",
+   "fieldname": "calling_hours_end",
+   "fieldtype": "Int",
+   "label": "Calling Hours End",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "section_twilio",
+   "fieldtype": "Section Break",
+   "label": "Twilio Bridge"
+  },
+  {
+   "description": "WSS URL for the AO Live media bridge (Twilio Media Streams). Required for phone AI unless SIP trunk is configured.",
+   "fieldname": "media_stream_url",
+   "fieldtype": "Data",
+   "label": "Media Stream URL"
+  },
+  {
+   "description": "sips:… trunk URL for OpenAI outbound SIP (optional alternative to media bridge).",
+   "fieldname": "sip_provider_url",
+   "fieldtype": "Data",
+   "label": "SIP Provider URL"
+  },
+  {
+   "fieldname": "column_break_sip",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sip_username",
+   "fieldtype": "Data",
+   "label": "SIP Username"
+  },
+  {
+   "fieldname": "sip_password",
+   "fieldtype": "Password",
+   "label": "SIP Password"
+  },
+  {
+   "fieldname": "section_webhook",
+   "fieldtype": "Section Break",
+   "label": "Webhooks"
+  },
+  {
+   "description": "Shared secret for Live status callbacks (X-CRM-Live-Secret).",
+   "fieldname": "webhook_secret",
+   "fieldtype": "Password",
+   "label": "Webhook Secret"
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-26 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "FCRM",
+ "name": "CRM Live Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Sales Manager"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

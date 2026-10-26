@@ -1,9 +1,28 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-"""Script packs + voice mappings for Vapi assistants."""
+"""Script packs + voice mappings for AI caller assistants."""
 
 from __future__ import annotations
+
+# Quality presets → provider TTS model ids (wired in voice_payload).
+VOICE_MODELS = {
+	"realistic": {
+		"label": "Most realistic",
+		"description": "Highest naturalness; slightly higher latency.",
+		"model": "eleven_v3",
+	},
+	"balanced": {
+		"label": "Balanced",
+		"description": "Strong quality with snappier turn-taking on live calls.",
+		"model": "eleven_v4_turbo",
+	},
+	"fast": {
+		"label": "Fastest",
+		"description": "Lowest latency; still clear on phone audio.",
+		"model": "eleven_flash_v2_5",
+	},
+}
 
 VOICES = {
 	"warm": {
@@ -73,9 +92,12 @@ SCRIPTS = {
 }
 
 
-def voice_payload(voice_id: str) -> dict:
+def voice_payload(voice_id: str, voice_model: str | None = None) -> dict:
 	meta = VOICES.get(voice_id) or VOICES["warm"]
-	return dict(meta["vapi"])
+	payload = dict(meta["vapi"])
+	model_meta = VOICE_MODELS.get(voice_model or "") or VOICE_MODELS["realistic"]
+	payload["model"] = model_meta["model"]
+	return payload
 
 
 def script_pack(script_id: str) -> dict:
@@ -87,7 +109,10 @@ def catalog() -> dict:
 		"voices": [
 			{"id": k, "label": v["label"], "description": v["description"]} for k, v in VOICES.items()
 		],
+		"voice_models": [
+			{"id": k, "label": v["label"], "description": v["description"]} for k, v in VOICE_MODELS.items()
+		],
 		"scripts": [
-			{"id": k, "label": v["label"], "description": v["description"]} for k, v in SCRIPTS.items() if k != "custom"
+			{"id": k, "label": v["label"], "description": v["description"]} for k, v in SCRIPTS.items()
 		],
 	}

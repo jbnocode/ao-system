@@ -13,7 +13,7 @@ test.describe('Login', () => {
 	test('an authenticated session reaches the CRM app', async ({ page }) => {
 		// Uses the shared authenticated storage state from auth.setup.
 		await page.goto('/crm')
-		await expect(page).toHaveURL(/\/crm/)
+		await expect(page).toHaveURL(/\/crm\/ai/)
 		await expect(page.getByRole('link', { name: 'Leads' }).first()).toBeVisible()
 	})
 

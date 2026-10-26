@@ -186,7 +186,7 @@ const dayOptions = [
 ]
 
 const usage = createResource({
-  url: 'crm.vapi.api.get_usage_dashboard',
+  url: 'crm.live.api.get_usage_dashboard',
   makeParams: () => ({
     days: days.value,
     user: userFilter.value || undefined,
@@ -236,9 +236,11 @@ function openAssignments() {
 
 function statusTheme(status) {
   const s = (status || '').toLowerCase()
-  if (s === 'ended') return 'green'
-  if (s === 'in-progress' || s === 'ringing' || s === 'queued') return 'blue'
-  if (s.includes('fail') || s === 'not-found') return 'red'
+  if (s === 'ended' || s === 'completed') return 'green'
+  if (s === 'in progress' || s === 'in-progress' || s === 'ringing' || s === 'queued')
+    return 'blue'
+  if (s.includes('fail') || s === 'not-found' || s === 'busy' || s === 'canceled')
+    return 'red'
   return 'gray'
 }
 

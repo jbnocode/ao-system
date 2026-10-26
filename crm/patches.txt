@@ -40,7 +40,9 @@ crm.patches.v1_0.install_life_insurance_pack
 crm.patches.v1_0.ensure_crm_credit_wallet
 crm.patches.v1_0.remove_apps_dropdown_item
 crm.patches.v1_0.ensure_vapi_call_log_fields
+crm.patches.v1_0.ensure_ai_caller_settings_fields
 crm.patches.v1_0.ensure_phone_number_request
 crm.patches.v1_0.ensure_crm_campaign_lead_field
 crm.patches.v1_0.migrate_crm_campaign_to_erpnext_shape_post
 crm.patches.v1_0.fix_desktop_home_page_after_setup
+crm.patches.v1_0.ensure_live_settings_fields

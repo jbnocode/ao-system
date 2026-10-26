@@ -2,21 +2,32 @@ import { computed, ref } from 'vue'
 
 const STORAGE_KEY = 'crm-ai-caller-setup'
 
+/** Built-in GPT-Live voices (OpenAI). */
 export const AI_CALLER_VOICES = [
   {
-    id: 'warm',
-    label: 'Warm & professional',
-    description: 'Calm, clear delivery for needs analysis and trust-building.',
+    id: 'cedar',
+    label: 'Cedar',
+    description: 'Natural and conversational — default for Live.',
   },
   {
-    id: 'energetic',
-    label: 'Upbeat & engaging',
-    description: 'Friendly energy for outreach and appointment setting.',
+    id: 'marin',
+    label: 'Marin',
+    description: 'Professional and clear.',
   },
   {
-    id: 'steady',
-    label: 'Steady & consultative',
-    description: 'Measured tone for complex products and underwriting talk tracks.',
+    id: 'alloy',
+    label: 'Alloy',
+    description: 'Neutral and balanced.',
+  },
+  {
+    id: 'echo',
+    label: 'Echo',
+    description: 'Warm and engaging.',
+  },
+  {
+    id: 'shimmer',
+    label: 'Shimmer',
+    description: 'Energetic and expressive.',
   },
 ]
 
@@ -45,17 +56,23 @@ export const AI_CALLER_SCRIPTS = [
     description:
       'For prospects needing affordable, straightforward death benefit protection.',
   },
+  {
+    id: 'custom',
+    label: 'Custom',
+    description: 'Blank talk track for the agent to refine later.',
+  },
 ]
 
 function defaultState() {
   return {
     completed: false,
     currentStep: 0,
-    voiceId: '',
+    voiceId: 'cedar',
     scriptId: '',
     customScript: false,
     respectDnc: true,
     reviewedCompliance: false,
+    liveVoicePrompt: '',
   }
 }
 

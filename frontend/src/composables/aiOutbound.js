@@ -6,19 +6,15 @@ export const aiCallBusy = ref(false)
 
 let loadPromise = null
 
-/** Load whether the current user can place AI outbound calls. */
+/** Load whether the current user can place AI outbound calls (GPT-Live + Twilio). */
 export function loadAiCallReady(force = false) {
   if (loadPromise && !force) return loadPromise
-  loadPromise = call('crm.vapi.api.get_my_assignment')
+  loadPromise = call('crm.live.api.get_my_assignment')
     .then((data) => {
-      // Ready when Vapi is on and a number+assistant are assigned.
-      // Voice/script/compliance live under AI Agent (no onboarding gate).
       aiCallReady.value = Boolean(
         data?.enabled &&
-          data?.has_private_key &&
-          data?.assignment?.phone_number &&
-          data?.assignment?.vapi_assistant_id &&
-          data?.assignment?.vapi_phone_id,
+          data?.has_openai_key &&
+          data?.assignment?.phone_number,
       )
       return aiCallReady.value
     })
@@ -30,7 +26,7 @@ export function loadAiCallReady(force = false) {
 }
 
 /**
- * Start a Vapi outbound call for the given number / CRM record.
+ * Start a GPT-Live outbound call for the given number / CRM record.
  * @returns {Promise<object|null>}
  */
 export async function startAiOutboundCall({
@@ -50,7 +46,7 @@ export async function startAiOutboundCall({
     if (!quiet) {
       toast.error(
         __(
-          'AI Caller is not ready. Ask a manager to link a number, or check AI Agent.',
+          'AI Caller is not ready. Ask a manager to assign a Twilio number, or check AI Agent.',
         ),
       )
     }
@@ -65,7 +61,7 @@ export async function startAiOutboundCall({
       payload.reference_doctype = referenceDoctype
       payload.reference_docname = referenceDocname
     }
-    const data = await call('crm.vapi.api.start_outbound_call', payload)
+    const data = await call('crm.live.api.start_outbound_call', payload)
     if (!quiet) toast.success(__('AI call started'))
     return data
   } catch (e) {

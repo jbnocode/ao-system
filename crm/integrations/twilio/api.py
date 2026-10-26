@@ -437,6 +437,16 @@ def twilio_incoming_call_handler(**kwargs):
 	args = frappe._dict(kwargs)
 	validate_twilio_request(args)
 
+	# GPT-Live path when the dialed number is assigned to an AI Caller Agent
+	try:
+		if frappe.db.get_single_value("CRM Live Settings", "enabled"):
+			from crm.live.twilio_bridge import _agent_for_phone, inbound_twiml
+
+			if _agent_for_phone(args.To):
+				return Response(inbound_twiml(args.From, args.To), mimetype="text/xml")
+	except Exception:
+		frappe.log_error(title="Live inbound routing check failed")
+
 	call_details = TwilioCallDetails(args)
 	try:
 		create_call_log(call_details)

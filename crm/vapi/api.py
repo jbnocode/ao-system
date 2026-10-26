@@ -11,7 +11,7 @@ from frappe.utils import get_datetime, now_datetime
 
 from crm.integrations.api import get_contact_by_phone_number
 from crm.vapi.client import get_client
-from crm.vapi.prompts import catalog, script_pack, voice_payload
+from crm.vapi.prompts import VOICE_MODELS, catalog, script_pack, voice_payload
 
 # Vapi call status / endedReason → CRM Call Log status
 _VAPI_STATUS_MAP = {
@@ -86,6 +86,10 @@ def get_vapi_settings() -> dict:
 		"has_private_key": has_private,
 		"has_webhook_secret": has_webhook_secret,
 		"default_voice_id": settings.default_voice_id or "warm",
+		"voice_model": getattr(settings, "voice_model", None) or "realistic",
+		"calling_hours_start": int(getattr(settings, "calling_hours_start", None) or 8),
+		"calling_hours_end": int(getattr(settings, "calling_hours_end", None) or 21),
+		"timezone": frappe.utils.get_system_timezone(),
 		"dashboard_url": settings.dashboard_url or "https://dashboard.vapi.ai",
 		"webhook_url": _webhook_url(),
 		"catalog": catalog(),
@@ -98,6 +102,9 @@ def save_vapi_settings(
 	public_key: str | None = None,
 	private_api_key: str | None = None,
 	default_voice_id: str | None = None,
+	voice_model: str | None = None,
+	calling_hours_start: int | str | None = None,
+	calling_hours_end: int | str | None = None,
 	dashboard_url: str | None = None,
 	webhook_secret: str | None = None,
 ) -> dict:
@@ -109,6 +116,10 @@ def save_vapi_settings(
 		doc.public_key = public_key
 	if default_voice_id is not None:
 		doc.default_voice_id = default_voice_id
+	if voice_model is not None:
+		_set_voice_model(doc, voice_model)
+	if calling_hours_start is not None or calling_hours_end is not None:
+		_set_calling_hours(doc, calling_hours_start, calling_hours_end)
 	if dashboard_url is not None:
 		doc.dashboard_url = dashboard_url
 	if private_api_key:
@@ -118,6 +129,51 @@ def save_vapi_settings(
 	doc.save(ignore_permissions=True)
 	frappe.db.commit()
 	return get_vapi_settings()
+
+
+@frappe.whitelist()
+def save_ai_caller_defaults(
+	default_voice_id: str | None = None,
+	voice_model: str | None = None,
+	calling_hours_start: int | str | None = None,
+	calling_hours_end: int | str | None = None,
+) -> dict:
+	"""Managers can set org defaults without touching API keys."""
+	_require_manager()
+	doc = frappe.get_single("CRM Vapi Settings")
+	if default_voice_id is not None:
+		doc.default_voice_id = default_voice_id
+	if voice_model is not None:
+		_set_voice_model(doc, voice_model)
+	if calling_hours_start is not None or calling_hours_end is not None:
+		_set_calling_hours(doc, calling_hours_start, calling_hours_end)
+	doc.save(ignore_permissions=True)
+	frappe.db.commit()
+	return get_vapi_settings()
+
+
+def _set_voice_model(doc, voice_model: str):
+	key = (voice_model or "").strip()
+	if key not in VOICE_MODELS:
+		frappe.throw(_("Invalid voice quality"))
+	doc.voice_model = key
+
+
+def _set_calling_hours(doc, start, end):
+	cur_start = int(getattr(doc, "calling_hours_start", None) or 8)
+	cur_end = int(getattr(doc, "calling_hours_end", None) or 21)
+	if start is not None and str(start).strip() != "":
+		cur_start = int(start)
+	if end is not None and str(end).strip() != "":
+		cur_end = int(end)
+	if cur_start < 0 or cur_start > 23:
+		frappe.throw(_("Calling hours start must be between 0 and 23"))
+	if cur_end < 1 or cur_end > 24:
+		frappe.throw(_("Calling hours end must be between 1 and 24"))
+	if cur_start >= cur_end:
+		frappe.throw(_("Calling hours start must be before end"))
+	doc.calling_hours_start = cur_start
+	doc.calling_hours_end = cur_end
 
 
 @frappe.whitelist()
@@ -152,12 +208,67 @@ def list_assignments() -> list:
 			"vapi_assistant_id",
 			"voice_id",
 			"script_id",
+			"custom_script",
+			"respect_dnc",
+			"reviewed_compliance",
 			"setup_completed",
 			"modified",
 		],
 		order_by="modified desc",
 	)
 	return rows
+
+
+@frappe.whitelist()
+def update_agent_assignment(
+	user: str,
+	voice_id: str | None = None,
+	script_id: str | None = None,
+	custom_script: int | str | None = None,
+	respect_dnc: int | str | None = None,
+	reviewed_compliance: int | str | None = None,
+	setup_completed: int | str | None = None,
+) -> dict:
+	"""Manager edits another agent's voice, script, and compliance flags."""
+	_require_manager()
+	user = (user or "").strip()
+	if not user or not frappe.db.exists("CRM AI Caller Agent", user):
+		frappe.throw(_("AI caller agent not found"))
+
+	agent = frappe.get_doc("CRM AI Caller Agent", user)
+	if voice_id is not None:
+		agent.voice_id = voice_id
+	if script_id is not None:
+		agent.script_id = script_id
+	if custom_script is not None:
+		agent.custom_script = 1 if int(custom_script or 0) else 0
+	elif script_id is not None:
+		agent.custom_script = 1 if script_id == "custom" else 0
+	if respect_dnc is not None:
+		agent.respect_dnc = 1 if int(respect_dnc or 0) else 0
+	if reviewed_compliance is not None:
+		agent.reviewed_compliance = 1 if int(reviewed_compliance or 0) else 0
+	if setup_completed is not None:
+		agent.setup_completed = 1 if int(setup_completed or 0) else 0
+
+	settings = frappe.get_single("CRM Vapi Settings")
+	if settings.enabled and agent.vapi_assistant_id:
+		try:
+			client = get_client()
+			client.update_assistant(
+				agent.vapi_assistant_id,
+				_assistant_payload(
+					user=user,
+					voice_id=agent.voice_id or "warm",
+					script_id=agent.script_id or ("custom" if agent.custom_script else "term"),
+				),
+			)
+		except Exception:
+			frappe.log_error(title=_("AI caller assistant sync failed"))
+
+	agent.save(ignore_permissions=True)
+	frappe.db.commit()
+	return _serialize_agent(agent)
 
 
 @frappe.whitelist()
@@ -833,11 +944,12 @@ def _agent_row(user: str):
 def _get_or_create_agent(user: str):
 	if frappe.db.exists("CRM AI Caller Agent", user):
 		return frappe.get_doc("CRM AI Caller Agent", user)
+	settings = frappe.get_single("CRM Vapi Settings")
 	doc = frappe.get_doc(
 		{
 			"doctype": "CRM AI Caller Agent",
 			"user": user,
-			"voice_id": "warm",
+			"voice_id": settings.default_voice_id or "warm",
 			"script_id": "term",
 			"respect_dnc": 1,
 		}
@@ -1280,15 +1392,24 @@ def _parse_iso_dt(value):
 
 
 def _assert_calling_hours():
-	"""TCPA-style window: 8:00–21:00 in the site timezone."""
+	"""TCPA-style window in the site timezone (defaults 8:00–21:00)."""
+	settings = frappe.get_single("CRM Vapi Settings")
+	start = int(getattr(settings, "calling_hours_start", None) or 8)
+	end = int(getattr(settings, "calling_hours_end", None) or 21)
 	now = now_datetime()
 	hour = now.hour
-	if hour < 8 or hour >= 21:
+	if hour < start or hour >= end:
+		tz = frappe.utils.get_system_timezone()
 		frappe.throw(
-			_("Outbound AI calls are only allowed between 8:00 AM and 9:00 PM ({0}).").format(
-				frappe.utils.get_system_timezone()
+			_("Outbound AI calls are only allowed between {0}:00 and {1}:00 ({2}).").format(
+				start, end, tz
 			)
 		)
+
+
+def _settings_voice_model() -> str:
+	settings = frappe.get_single("CRM Vapi Settings")
+	return getattr(settings, "voice_model", None) or "realistic"
 
 
 def _assert_not_dnc(phone: str):
@@ -1380,7 +1501,7 @@ def _assistant_payload(user: str, voice_id: str, script_id: str) -> dict:
 			"model": "gpt-4o-mini",
 			"messages": [{"role": "system", "content": pack["system"]}],
 		},
-		"voice": voice_payload(voice_id),
+		"voice": voice_payload(voice_id, _settings_voice_model()),
 		"server": server,
 		"serverMessages": ["status-update", "end-of-call-report"],
 	}

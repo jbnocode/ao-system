@@ -2,11 +2,11 @@
   <div class="flex h-full flex-col overflow-y-auto p-8 text-ink-gray-8">
     <div class="mb-6 flex items-start justify-between gap-3">
       <div>
-        <h2 class="mb-1 text-2xl-semibold">{{ __('Vapi') }}</h2>
+        <h2 class="mb-1 text-2xl-semibold">{{ __('AI Calling (Legacy)') }}</h2>
         <p class="text-p-base text-ink-gray-6">
           {{
             __(
-              'Connect AI Caller for outbound calling. Buy numbers under Telephony, then link them under AI Caller.',
+              'Legacy Vapi keys. New AI Caller work uses Settings → AI Live (GPT-Live) and Twilio. Leave this frozen unless you still run Vapi numbers.',
             )
           }}
         </p>
@@ -15,7 +15,7 @@
         v-if="form.dashboard_url"
         variant="subtle"
         icon-left="lucide-external-link"
-        :label="__('Open Vapi dashboard')"
+        :label="__('Open provider dashboard')"
         @click="openDashboard"
       />
     </div>
@@ -52,8 +52,32 @@
           :options="voiceOptions"
         />
         <FormControl
+          v-model="form.voice_model"
+          :label="__('Voice quality')"
+          type="select"
+          :options="voiceModelOptions"
+        />
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div class="min-w-0 flex-1">
+            <FormControl
+              v-model="form.calling_hours_start"
+              type="select"
+              :label="__('Calling hours start')"
+              :options="hourStartOptions"
+            />
+          </div>
+          <div class="min-w-0 flex-1">
+            <FormControl
+              v-model="form.calling_hours_end"
+              type="select"
+              :label="__('Calling hours end')"
+              :options="hourEndOptions"
+            />
+          </div>
+        </div>
+        <FormControl
           v-model="form.dashboard_url"
-          :label="__('Dashboard URL')"
+          :label="__('Provider dashboard URL')"
           type="text"
         />
         <FormControl
@@ -111,7 +135,10 @@ const form = reactive({
   private_api_key: '',
   public_key: '',
   default_voice_id: 'warm',
-  dashboard_url: 'https://dashboard.vapi.ai',
+  voice_model: 'realistic',
+  calling_hours_start: '8',
+  calling_hours_end: '21',
+  dashboard_url: '',
   webhook_secret: '',
 })
 
@@ -120,6 +147,36 @@ const voiceOptions = computed(() => [
   { label: __('Upbeat & engaging'), value: 'energetic' },
   { label: __('Steady & consultative'), value: 'steady' },
 ])
+
+const voiceModelOptions = computed(() => [
+  { label: __('Most realistic'), value: 'realistic' },
+  { label: __('Balanced'), value: 'balanced' },
+  { label: __('Fastest'), value: 'fast' },
+])
+
+const hourStartOptions = computed(() =>
+  Array.from({ length: 24 }, (_, h) => ({
+    label: formatHour(h),
+    value: String(h),
+  })),
+)
+
+const hourEndOptions = computed(() =>
+  Array.from({ length: 24 }, (_, i) => {
+    const h = i + 1
+    return {
+      label: formatHour(h === 24 ? 0 : h, h === 24),
+      value: String(h),
+    }
+  }),
+)
+
+function formatHour(h, isMidnightNext = false) {
+  if (isMidnightNext) return __('12:00 AM (next day)')
+  const period = h >= 12 ? 'PM' : 'AM'
+  const hour12 = h % 12 || 12
+  return `${hour12}:00 ${period}`
+}
 
 onMounted(load)
 
@@ -130,14 +187,19 @@ async function load() {
     form.enabled = !!data.enabled
     form.public_key = data.public_key || ''
     form.default_voice_id = data.default_voice_id || 'warm'
-    form.dashboard_url = data.dashboard_url || 'https://dashboard.vapi.ai'
+    form.voice_model = data.voice_model || 'realistic'
+    form.calling_hours_start = String(data.calling_hours_start ?? 8)
+    form.calling_hours_end = String(data.calling_hours_end ?? 21)
+    form.dashboard_url = data.dashboard_url || ''
     form.private_api_key = ''
     form.webhook_secret = ''
     hasPrivateKey.value = !!data.has_private_key
     hasWebhookSecret.value = !!data.has_webhook_secret
     webhookUrl.value = data.webhook_url || ''
   } catch (e) {
-    toast.error(e?.messages?.[0] || e?.message || __('Could not load Vapi settings'))
+    toast.error(
+      e?.messages?.[0] || e?.message || __('Could not load AI calling settings'),
+    )
   } finally {
     loading.value = false
   }
@@ -150,6 +212,9 @@ async function save() {
       enabled: form.enabled ? 1 : 0,
       public_key: form.public_key,
       default_voice_id: form.default_voice_id,
+      voice_model: form.voice_model,
+      calling_hours_start: form.calling_hours_start,
+      calling_hours_end: form.calling_hours_end,
       dashboard_url: form.dashboard_url,
     }
     if (form.private_api_key) payload.private_api_key = form.private_api_key
@@ -169,6 +234,6 @@ async function save() {
 }
 
 function openDashboard() {
-  window.open(form.dashboard_url || 'https://dashboard.vapi.ai', '_blank')
+  if (form.dashboard_url) window.open(form.dashboard_url, '_blank')
 }
 </script>

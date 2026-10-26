@@ -13,7 +13,7 @@ bench --site <site> install-app ao
 
 - Desk Apps tile **AO** → `/desk/ao-management`
 - Workspace **AO Management**: Platform / Users / Integrations / Agency shortcuts (FCRM Settings, Vapi, Twilio, credits, users, etc.)
-- System Manager home is Desk (not `/crm`); Sales User / Sales Manager keep CRM
+- Post-login home is `/crm/ai` for CRM roles (incl. System Manager); Desk stays at `/desk`
 
 ## Frontend
 
@@ -37,6 +37,14 @@ bench --site <site> migrate
 ```
 
 CRM wraps it via `crm.api.booking` (Calendly stays CRM-only).
+
+## AI Voice (GPT-Live + Twilio)
+
+- **Settings → AI Live**: OpenAI GPT-Live key, calling hours, media bridge / SIP
+- **Settings → AI Caller**: Twilio assign + agent voice/script (Vapi buy/import frozen)
+- Package `crm/live/` — WebRTC test, outbound/inbound Twilio bridge, Call Log `GPT-Live`
+- Media bridge: `infra/ao-live-media-bridge/` (see `crm/live/README.md`)
+- Legacy Vapi UI: **Settings → AI Calling (Legacy)**
 
 ## Backend (`crm/life/`)
 

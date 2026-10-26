@@ -110,6 +110,7 @@ import SlaConfig from './Sla/SlaConfig.vue'
 import LifeInsuranceSettings from '@/components/Settings/LifeInsuranceSettings.vue'
 import AiSettings from '@/components/Settings/AiSettings.vue'
 import AiCallerAdmin from '@/components/Settings/AiCallerAdmin.vue'
+import LiveSettings from '@/components/Settings/LiveSettings.vue'
 import VapiSettings from '@/components/Settings/VapiSettings.vue'
 import CreditsSettings from '@/components/Settings/CreditsSettings.vue'
 import CreditUsageSettings from '@/components/Settings/CreditUsageSettings.vue'
@@ -280,9 +281,9 @@ const tabs = computed(() => {
           component: markRaw(TelephonyPage),
         },
         {
-          label: __('Vapi'),
+          label: __('AI Live'),
           icon: LucideSparkles,
-          component: markRaw(VapiSettings),
+          component: markRaw(LiveSettings),
           condition: () => isAdmin(),
         },
         {
@@ -290,6 +291,12 @@ const tabs = computed(() => {
           icon: LucidePhoneCall,
           component: markRaw(AiCallerAdmin),
           condition: () => isManager(),
+        },
+        {
+          label: __('AI Calling (Legacy)'),
+          icon: LucideSparkles,
+          component: markRaw(VapiSettings),
+          condition: () => isAdmin(),
         },
         {
           label: __('WhatsApp'),

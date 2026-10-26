@@ -87,7 +87,7 @@
           <h2 class="mb-4 text-xl-semibold text-ink-gray-9">
             {{ __('Test agent') }}
           </h2>
-          <VapiTestWidget />
+          <LiveTestWidget />
         </div>
 
         <AiCallerCallLogsPanel
@@ -462,7 +462,7 @@ import AiCallerCallLogsPanel from '@/components/AICaller/AiCallerCallLogsPanel.v
 import AiCallerComposer from '@/components/AICaller/AiCallerComposer.vue'
 import AiCallerPhonePanel from '@/components/AICaller/AiCallerPhonePanel.vue'
 import AiCallerSidebar from '@/components/AICaller/AiCallerSidebar.vue'
-import VapiTestWidget from '@/components/AICaller/VapiTestWidget.vue'
+import LiveTestWidget from '@/components/AICaller/LiveTestWidget.vue'
 import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
 import LayoutHeader from '@/components/LayoutHeader.vue'
 import SaveCallTranscriptModal from '@/components/Modals/SaveCallTranscriptModal.vue'
@@ -544,7 +544,7 @@ const lastCallStatus = ref('')
 let panelCloseTimer = null
 
 const assignmentResource = createResource({
-  url: 'crm.vapi.api.get_my_assignment',
+  url: 'crm.live.api.get_my_assignment',
   auto: true,
   onSuccess(data) {
     assignment.value = data?.assignment || null
@@ -561,11 +561,7 @@ const firstName = computed(() => {
   return (u?.first_name || u?.full_name || '').split(' ')[0] || ''
 })
 
-const hasPhone = computed(() =>
-  Boolean(
-    assignment.value?.phone_number && assignment.value?.vapi_assistant_id,
-  ),
-)
+const hasPhone = computed(() => Boolean(assignment.value?.phone_number))
 
 const number = ref('')
 const selectedLeadName = ref('')

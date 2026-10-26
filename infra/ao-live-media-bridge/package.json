@@ -1,0 +1,18 @@
+{
+  "name": "ao-live-media-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Twilio Media Streams ↔ OpenAI GPT-Live phone bridge for AO CRM",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node --watch server.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "openai": "^7.43.0",
+    "ws": "^8.18.0"
+  }
+}

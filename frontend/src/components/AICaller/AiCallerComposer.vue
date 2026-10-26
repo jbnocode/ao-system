@@ -103,9 +103,7 @@ const emit = defineEmits(['action', 'prompt'])
 
 const draft = ref('')
 
-const hasAssignment = computed(() =>
-  Boolean(props.assignment?.phone_number && props.assignment?.vapi_assistant_id),
-)
+const hasAssignment = computed(() => Boolean(props.assignment?.phone_number))
 
 const greeting = computed(() => {
   const name = (props.firstName || '').trim()

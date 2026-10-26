@@ -18,10 +18,7 @@
           {{ assignment.phone_number }}
         </div>
         <div class="mt-1 text-p-sm text-ink-gray-5">
-          <span v-if="assignment.vapi_assistant_id">
-            {{ __('Ready for AI calls') }}
-          </span>
-          <span v-else>{{ __('Waiting to be linked') }}</span>
+          {{ __('Ready for GPT-Live AI calls') }}
         </div>
       </div>
       <div v-else class="text-p-base text-ink-gray-6">

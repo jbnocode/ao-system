@@ -350,9 +350,9 @@ def block_desk_for_tenants():
 	if not user or user in ("Guest", "Administrator"):
 		return
 
-	# Only platform admins may use Desk. Sales Manager / Sales User are tenants → /crm.
+	# Only platform admins may use Desk. Sales Manager / Sales User are tenants → /crm/ai.
 	if "System Manager" in frappe.get_roles(user):
 		return
 
-	frappe.redirect("/crm")
+	frappe.redirect("/crm/ai")
 

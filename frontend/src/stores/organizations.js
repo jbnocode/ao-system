@@ -22,7 +22,7 @@ export const organizationsStore = defineStore('crm-organizations', () => {
       )
 
       if (isAuthError) {
-        window.location.href = '/login?redirect-to=/crm'
+        window.location.href = '/login?redirect-to=/crm/ai'
       }
     },
   })

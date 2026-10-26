@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AO · Direct GPT-Live-1 (no Vapi)</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f3ee;
+        --ink: #1c1917;
+        --muted: #78716c;
+        --card: #fffdf9;
+        --line: #e7e5e4;
+        --accent: #0f766e;
+        --accent-ink: #ecfdf5;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia,
+          serif;
+        background:
+          radial-gradient(1200px 600px at 10% -10%, #dcefea 0%, transparent 55%),
+          radial-gradient(900px 500px at 100% 0%, #f5e6d3 0%, transparent 50%),
+          var(--bg);
+        color: var(--ink);
+      }
+      main {
+        max-width: 40rem;
+        margin: 0 auto;
+        padding: 3rem 1.25rem 4rem;
+      }
+      .eyebrow {
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          sans-serif;
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin: 0 0 0.75rem;
+      }
+      h1 {
+        font-weight: 600;
+        font-size: clamp(1.75rem, 4vw, 2.35rem);
+        line-height: 1.15;
+        margin: 0 0 0.75rem;
+      }
+      .lede {
+        font-size: 1.05rem;
+        line-height: 1.5;
+        color: var(--muted);
+        margin: 0 0 1.75rem;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 1rem;
+        padding: 1.25rem 1.35rem 1.5rem;
+        box-shadow: 0 12px 40px rgba(28, 25, 23, 0.06);
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+        align-items: center;
+        margin-bottom: 1rem;
+      }
+      button {
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          sans-serif;
+        font-size: 0.95rem;
+        font-weight: 600;
+        border: 0;
+        border-radius: 999px;
+        padding: 0.7rem 1.15rem;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      #start {
+        background: var(--accent);
+        color: var(--accent-ink);
+      }
+      #stop {
+        background: #1c1917;
+        color: #fafaf9;
+      }
+      #status {
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          sans-serif;
+        font-size: 0.9rem;
+        color: var(--muted);
+        margin: 0 0 1rem;
+        min-height: 1.35em;
+      }
+      audio {
+        width: 100%;
+        margin-top: 0.25rem;
+      }
+      .tips {
+        margin: 1.5rem 0 0;
+        padding: 0;
+        list-style: none;
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          sans-serif;
+        font-size: 0.88rem;
+        color: var(--muted);
+        display: grid;
+        gap: 0.55rem;
+      }
+      .tips li {
+        padding-left: 1rem;
+        position: relative;
+      }
+      .tips li::before {
+        content: "→";
+        position: absolute;
+        left: 0;
+        color: var(--accent);
+      }
+      .ab {
+        margin-top: 1.75rem;
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          sans-serif;
+        font-size: 0.85rem;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+      .ab strong {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .setup {
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          sans-serif;
+        font-size: 0.88rem;
+        line-height: 1.45;
+        color: #9a3412;
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        border-radius: 0.75rem;
+        padding: 0.75rem 0.9rem;
+        margin: 0 0 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Direct OpenAI · no Vapi</p>
+      <h1>GPT-Live-1 nuance check</h1>
+      <p class="lede">
+        Same model family as the OpenAI marketing demo, connected straight to
+        OpenAI over WebRTC. Compare this feel to your Vapi dial/web test.
+      </p>
+
+      <div class="card">
+        <div class="row">
+          <button id="start" type="button">Start conversation</button>
+          <button id="stop" type="button" disabled>End conversation</button>
+        </div>
+        <p id="status">Checking server…</p>
+        <p id="setup" class="setup" hidden></p>
+        <audio id="remoteAudio" autoplay controls></audio>
+      </div>
+
+      <ul class="tips">
+        <li>Talk over it mid-sentence, then change the question.</li>
+        <li>Pause to think — it should wait, not jump in.</li>
+        <li>Laugh, hesitate, or say “mm-hmm” — see if it stays with you.</li>
+      </ul>
+
+      <p class="ab">
+        <strong>A/B:</strong> this page (direct) vs Vapi assistant
+        <code>ab2fd5b7…</code> on <strong>+1 (912) 766-9359</strong> or the Vapi
+        web call widget.
+      </p>
+    </main>
+
+    <script type="module">
+      const start = document.getElementById("start")
+      const stop = document.getElementById("stop")
+      const status = document.getElementById("status")
+      const setup = document.getElementById("setup")
+      const audio = document.getElementById("remoteAudio")
+
+      let peer
+      let events
+      let microphone
+      let closeTimeout
+      let ready = false
+      let finalized = false
+      let serverReady = false
+
+      async function refreshHealth() {
+        try {
+          const res = await fetch("/health")
+          const data = await res.json()
+          serverReady = Boolean(data.ok && data.keyLooksOpenAi && data.hasLiveApi)
+          if (serverReady) {
+            setup.hidden = true
+            start.disabled = false
+            status.textContent = "Idle — click start and allow the microphone."
+          } else {
+            setup.hidden = false
+            setup.textContent =
+              data.hint ||
+              "Server is up, but OPENAI_API_KEY is missing or not an OpenAI sk- key. Add it to infra/ao-gpt-live-demo/.env and restart npm start."
+            start.disabled = true
+            status.textContent = "Waiting for OpenAI API key…"
+          }
+        } catch {
+          serverReady = false
+          setup.hidden = false
+          setup.textContent =
+            "Cannot reach the demo server on :3000. From infra/ao-gpt-live-demo run: npm start"
+          start.disabled = true
+          status.textContent = "Server offline."
+        }
+      }
+
+      await refreshHealth()
+
+      function cleanup() {
+        clearTimeout(closeTimeout)
+        microphone?.getTracks().forEach((track) => track.stop())
+        events?.close()
+        peer?.close()
+        audio.srcObject = null
+        ready = false
+        start.disabled = false
+        stop.disabled = true
+      }
+
+      start.addEventListener("click", async () => {
+        await refreshHealth()
+        if (!serverReady) return
+        start.disabled = true
+        finalized = false
+        status.textContent = "Connecting…"
+        try {
+          const connection = new RTCPeerConnection()
+          peer = connection
+          connection.addEventListener("track", (event) => {
+            audio.srcObject = new MediaStream([event.track])
+            audio.play().catch(() => {
+              status.textContent =
+                "Select play on the audio controls to hear the assistant."
+            })
+          })
+          microphone = await navigator.mediaDevices.getUserMedia({ audio: true })
+          for (const track of microphone.getAudioTracks()) {
+            connection.addTrack(track, microphone)
+          }
+
+          events = connection.createDataChannel("oai-events")
+          events.addEventListener("message", ({ data }) => {
+            const event = JSON.parse(data)
+            if (event.type === "session.started") {
+              ready = true
+              stop.disabled = false
+              status.textContent = "Connected — speak naturally."
+            } else if (event.type === "session.closed") {
+              finalized = true
+              console.log("Final session usage", event.usage)
+              status.textContent = "Conversation ended."
+              cleanup()
+            } else {
+              console.log(event)
+            }
+          })
+          events.addEventListener("close", (event) => {
+            if (event.target !== events) return
+            if (!finalized) {
+              status.textContent = "Disconnected without final session usage."
+              cleanup()
+            }
+          })
+
+          const offer = await connection.createOffer()
+          await connection.setLocalDescription(offer)
+          if (connection.iceGatheringState !== "complete") {
+            await new Promise((resolve, reject) => {
+              const timeout = setTimeout(() => {
+                connection.removeEventListener("icegatheringstatechange", onState)
+                reject(new Error("Timed out while gathering ICE candidates"))
+              }, 10_000)
+              function onState() {
+                if (connection.iceGatheringState !== "complete") return
+                clearTimeout(timeout)
+                connection.removeEventListener("icegatheringstatechange", onState)
+                resolve(undefined)
+              }
+              connection.addEventListener("icegatheringstatechange", onState)
+              onState()
+            })
+          }
+
+          const sdp = connection.localDescription?.sdp
+          if (!sdp) throw new Error("Missing local SDP offer")
+          const response = await fetch("/api/session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sdp }),
+          })
+          if (!response.ok) {
+            let msg = await response.text()
+            try {
+              msg = JSON.parse(msg).error || msg
+            } catch {
+              /* keep text */
+            }
+            throw new Error(msg)
+          }
+
+          const result = await response.json()
+          console.log("Created session", result.session?.id)
+          await connection.setRemoteDescription({
+            type: "answer",
+            sdp: result.transport.sdp,
+          })
+        } catch (error) {
+          status.textContent =
+            error instanceof Error ? error.message : String(error)
+          cleanup()
+        }
+      })
+
+      stop.addEventListener("click", () => {
+        if (!ready || !events || events.readyState !== "open") return
+        stop.disabled = true
+        status.textContent = "Finishing the conversation…"
+        events.send(JSON.stringify({ type: "session.close" }))
+        closeTimeout = setTimeout(() => {
+          status.textContent = "Incomplete finalization: no session.closed event."
+          cleanup()
+        }, 15_000)
+      })
+    </script>
+  </body>
+</html>

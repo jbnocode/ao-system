@@ -11,7 +11,10 @@
   "public_key",
   "section_defaults",
   "default_voice_id",
+  "voice_model",
   "column_break_dash",
+  "calling_hours_start",
+  "calling_hours_end",
   "dashboard_url",
   "section_webhook",
   "webhook_secret"
@@ -57,15 +60,39 @@
    "options": "warm\nenergetic\nsteady"
   },
   {
+   "default": "realistic",
+   "description": "TTS quality vs latency for outbound AI calls.",
+   "fieldname": "voice_model",
+   "fieldtype": "Select",
+   "label": "Voice Quality",
+   "options": "realistic\nbalanced\nfast"
+  },
+  {
    "fieldname": "column_break_dash",
    "fieldtype": "Column Break"
+  },
+  {
+   "default": "8",
+   "description": "Local site timezone. Inclusive start hour (0-23).",
+   "fieldname": "calling_hours_start",
+   "fieldtype": "Int",
+   "label": "Calling Hours Start",
+   "non_negative": 1
+  },
+  {
+   "default": "21",
+   "description": "Local site timezone. Exclusive end hour (0-24). Default 21 = until 9:00 PM.",
+   "fieldname": "calling_hours_end",
+   "fieldtype": "Int",
+   "label": "Calling Hours End",
+   "non_negative": 1
   },
   {
    "default": "https://dashboard.vapi.ai",
    "description": "Escape hatch for System Managers",
    "fieldname": "dashboard_url",
    "fieldtype": "Data",
-   "label": "Vapi Dashboard URL"
+   "label": "Provider Dashboard URL"
   },
   {
    "fieldname": "section_webhook",

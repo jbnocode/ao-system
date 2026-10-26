@@ -22,7 +22,7 @@ class TestBlockDeskForTenants(IntegrationTestCase):
 			session.user = "sales.manager@local.dev"
 			with self.assertRaises(frappe.Redirect):
 				block_desk_for_tenants()
-			redirect.assert_called_once_with("/crm")
+			redirect.assert_called_once_with("/crm/ai")
 
 	def test_allows_system_manager_on_desk(self):
 		request = MagicMock()

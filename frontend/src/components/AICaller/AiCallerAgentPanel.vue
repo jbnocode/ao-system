@@ -81,6 +81,18 @@
             :label="__('Script')"
             :options="scriptOptions"
           />
+          <FormControl
+            v-model="form.live_voice_prompt"
+            type="textarea"
+            :label="__('Voice character (optional)')"
+          />
+          <p class="text-p-sm text-ink-gray-5 -mt-2">
+            {{
+              __(
+                'Describe how you want the Live agent to sound. Managers can also set a prompt-to-voice id.',
+              )
+            }}
+          </p>
           <div class="flex items-center justify-between gap-3 py-1">
             <div>
               <div class="text-p-sm-medium text-ink-gray-8">
@@ -134,8 +146,9 @@ const emit = defineEmits(['open-settings', 'saved'])
 const saving = ref(false)
 const error = ref('')
 const form = reactive({
-  voice_id: 'warm',
+  voice_id: 'cedar',
   script_id: 'term',
+  live_voice_prompt: '',
   respect_dnc: true,
   reviewed_compliance: false,
 })
@@ -154,8 +167,9 @@ watch(
   () => props.assignment,
   (a) => {
     if (!a) return
-    form.voice_id = a.voice_id || 'warm'
+    form.voice_id = a.voice_id || 'cedar'
     form.script_id = a.script_id || (a.custom_script ? 'custom' : 'term')
+    form.live_voice_prompt = a.live_voice_prompt || ''
     form.respect_dnc = a.respect_dnc !== false && a.respect_dnc !== 0
     form.reviewed_compliance = Boolean(a.reviewed_compliance)
   },
@@ -167,12 +181,13 @@ async function save() {
   saving.value = true
   error.value = ''
   try {
-    const data = await call('crm.vapi.api.sync_my_setup', {
+    const data = await call('crm.live.api.sync_my_setup', {
       voice_id: form.voice_id,
       script_id: form.script_id,
       custom_script: form.script_id === 'custom' ? 1 : 0,
       respect_dnc: form.respect_dnc ? 1 : 0,
       reviewed_compliance: form.reviewed_compliance ? 1 : 0,
+      live_voice_prompt: form.live_voice_prompt,
       setup_completed: 1,
     })
     toast.success(__('Agent saved'))

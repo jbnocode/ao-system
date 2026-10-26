@@ -113,7 +113,7 @@
   },
   {
    "collapsible": 1,
-   "depends_on": "eval:doc.ai_summary || doc.ai_transcript || doc.telephony_medium == 'Vapi'",
+   "depends_on": "eval:doc.ai_summary || doc.ai_transcript || doc.telephony_medium == 'Vapi' || doc.telephony_medium == 'GPT-Live'",
    "fieldname": "section_ai",
    "fieldtype": "Section Break",
    "label": "Call Transcript"
@@ -171,7 +171,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Telephony Medium",
-   "options": "\nManual\nTwilio\nExotel\nVapi",
+   "options": "\nManual\nTwilio\nExotel\nVapi\nGPT-Live",
    "read_only": 1
   },
   {
@@ -181,7 +181,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-30 12:31:44.974374",
+ "modified": "2026-10-26 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "FCRM",
  "name": "CRM Call Log",
