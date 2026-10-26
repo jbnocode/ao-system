@@ -290,7 +290,7 @@ const tabs = computed(() => {
           label: __('AI Caller'),
           icon: LucidePhoneCall,
           component: markRaw(AiCallerAdmin),
-          condition: () => isManager(),
+          condition: () => isAdmin(),
         },
         {
           label: __('AI Calling (Legacy)'),

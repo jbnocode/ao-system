@@ -26,14 +26,14 @@
       <template v-if="!hasPhone">
         {{
           __(
-            'No AI number linked yet. Ask a manager to assign one under Settings → AI Caller.',
+            'No AI number linked yet. Ask a System Manager to assign one under Settings → AI Caller.',
           )
         }}
       </template>
       <template v-else>
         {{
           __(
-            'AI Caller is not ready yet. Check Phone Numbers or ask a manager to finish setup in Settings.',
+            'AI Caller is not ready yet. Check Phone Numbers or ask a System Manager to finish setup in Settings.',
           )
         }}
         <button
@@ -501,7 +501,7 @@ const PANEL_ANIMATION_MS = 300
 const router = useRouter()
 const route = useRoute()
 const { getLeadStatus, leadStatuses } = statusesStore()
-const { getUser, isManager } = usersStore()
+const { getUser, isManager, isAdmin } = usersStore()
 
 const PANEL_QUERY_VALUES = new Set([
   'composer',
@@ -667,7 +667,7 @@ function onSidebarNavigate(routeName) {
 
 function onComposerAction(id) {
   if (id === 'usage') {
-    if (!isManager()) return
+    if (!isAdmin()) return
     onSidebarNavigate('AI Caller Usage')
     return
   }
@@ -675,6 +675,7 @@ function onComposerAction(id) {
 }
 
 function openAiCallerSettings() {
+  if (!isAdmin()) return
   activeSettingsPage.value = 'AI Caller'
   showSettings.value = true
 }

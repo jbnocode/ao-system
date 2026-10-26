@@ -21,6 +21,7 @@ def _require_admin():
 
 
 def _require_manager():
+	"""Kept for any future Sales Manager surfaces; AI Caller admin APIs use _require_admin."""
 	roles = set(frappe.get_roles())
 	if not roles.intersection({"System Manager", "Sales Manager"}):
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
@@ -186,8 +187,8 @@ def save_ai_caller_defaults(
 	calling_hours_start: int | str | None = None,
 	calling_hours_end: int | str | None = None,
 ) -> dict:
-	"""Managers can set org defaults without touching API keys."""
-	_require_manager()
+	"""System Managers can set org defaults without touching API keys."""
+	_require_admin()
 	doc = frappe.get_single("CRM Live Settings")
 	if default_voice_id is not None:
 		doc.default_voice_id = default_voice_id
@@ -238,7 +239,7 @@ def get_my_assignment() -> dict:
 
 @frappe.whitelist()
 def list_assignments() -> list:
-	_require_manager()
+	_require_admin()
 	return frappe.get_all(
 		"CRM AI Caller Agent",
 		fields=[
@@ -263,7 +264,7 @@ def list_assignments() -> list:
 @frappe.whitelist()
 def assign_twilio_number(phone_number: str, user: str) -> dict:
 	"""Assign a Twilio E.164 number to a user for GPT-Live AI + telephony."""
-	_require_manager()
+	_require_admin()
 	from crm.integrations.twilio.api import assign_phone_number as twilio_assign
 	from crm.live.twilio_bridge import _normalize_phone, ensure_ai_voice_webhook
 
@@ -299,7 +300,7 @@ def assign_twilio_number(phone_number: str, user: str) -> dict:
 
 @frappe.whitelist()
 def unassign_agent(user: str) -> dict:
-	_require_manager()
+	_require_admin()
 	user = (user or "").strip()
 	if frappe.db.exists("CRM AI Caller Agent", user):
 		phone = frappe.db.get_value("CRM AI Caller Agent", user, "phone_number") or ""
@@ -327,7 +328,7 @@ def update_agent_assignment(
 	live_voice_id: str | None = None,
 	live_voice_prompt: str | None = None,
 ) -> dict:
-	_require_manager()
+	_require_admin()
 	user = (user or "").strip()
 	if not user or not frappe.db.exists("CRM AI Caller Agent", user):
 		frappe.throw(_("AI caller agent not found"))
@@ -424,7 +425,7 @@ def list_voices() -> dict:
 
 @frappe.whitelist()
 def create_org_prompt_voice(name: str, prompt: str, assign_to_org: int | str | None = 1) -> dict:
-	_require_manager()
+	_require_admin()
 	return create_prompt_voice(name, prompt, assign_to_org=assign_to_org)
 
 
@@ -447,7 +448,7 @@ def get_widget_config() -> dict:
 @frappe.whitelist()
 def get_usage_dashboard(days: int | str = 30, user: str | None = None) -> dict:
 	"""Manager dashboard: aggregate GPT-Live call logs by agent."""
-	_require_manager()
+	_require_admin()
 	days = max(1, min(int(days or 30), 90))
 	from datetime import timedelta
 
@@ -553,7 +554,7 @@ def get_usage_dashboard(days: int | str = 30, user: str | None = None) -> dict:
 @frappe.whitelist()
 def list_twilio_numbers_for_assign() -> list:
 	"""Twilio inventory for manager assign UI."""
-	_require_manager()
+	_require_admin()
 	from crm.integrations.twilio.api import list_phone_numbers
 
 	try:
